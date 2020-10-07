@@ -1,0 +1,12 @@
+[[chap_13]]
+Options
+-------
+
+______________________________________________________________________________________________________________________
+This chapter describes the use of positional parameters as options to a
+script. We will bring up the following topics:
+
+* The `getopts` Bash built-in command
+* Handling invalid options
+* Option arguments
+______________________________________________________________________________________________________________________

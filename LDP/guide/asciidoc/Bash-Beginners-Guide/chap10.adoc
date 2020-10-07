@@ -1,0 +1,720 @@
+[[chap_10]]
+More on variables
+-----------------
+
+___________________________________________________________________________________________________________________
+In this chapter, we will discuss the advanced use of variables and
+arguments. Upon completion, you will be able to:
+
+* Declare and use an array of variables
+* Specify the sort of variable you want to use
+* Make variables read-only
+* Use `set` to assign a value to a variable
+___________________________________________________________________________________________________________________
+
+[[sect_10_01]]
+Types of variables
+------------------
+
+[[sect_10_01_01]]
+General assignment of values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As we already saw, Bash understands many different kinds of variables or
+parameters. Thus far, we haven't bothered much with what kind of
+variables we assigned, so our variables could hold any value that we
+assigned to them. A simple command line example demonstrates this:
+
+....
+[bob in ~] VARIABLE=12
+
+[bob in ~] echo $VARIABLE
+12
+
+[bob in ~] VARIABLE=string
+
+[bob in ~] echo $VARIABLE
+string
+....
+
+There are cases when you want to avoid this kind of behavior, for
+instance when handling telephone and other numbers. Apart from integers
+and variables, you may also want to specify a variable that is a
+constant. This is often done at the beginning of a script, when the
+value of the constant is declared. After that, there are only references
+to the constant variable name, so that when the constant needs to be
+changed, it only has to be done once. A variable may also be a series of
+variables of any type, a so-called _array_ of variablesarraysvariables
+(`VAR0``VAR1`, `VAR2`, ... `VARN`).
+
+[[sect_10_01_02]]
+Using the declare built-in
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Using a `declare` statement, we can limit the value assignment to
+variables.
+
+The syntax for `declare` is the following:
+
+declare
+
+OPTION(s)
+
+VARIABLE
+
+=value
+
+The following options are used to determine the type of data the
+variable can hold and to assign it attributes:
+
+.Options to the declare built-in
+[cols=",",options="header",]
+|=======================================================================
+|Option |Meaning
+|`-a` |Variable is an arrayarraysdeclaration.
+
+|`-f` |Use function names only.
+
+|`-i` |The variable is to be treated as an integer; arithmeticarithmetic
+evaluationdeclare built-in evaluation is performed when the variable is
+assigned a value (see link:#sect_03_04_05[???]).
+
+|`-p` |Display the attributes and values of each variable. When `-p` is
+used, additional options are ignored.
+
+|`-r` |Make variables read-only. These variables cannot then be assigned
+values by subsequent assignment statements, nor can they be unset.
+
+|`-t` |Give each variable the _trace_ attribute.
+
+|`-x` |Mark each variable for export to subsequent commands via the
+environment.
+|=======================================================================
+
+Using `+` instead of `-` turns off the attribute instead. When used in a
+function, `declare` creates local variables.
+
+The following example shows how assignment of a type to a variable
+influences the value.
+
+....
+[bob in ~] declare -i VARIABLE=12
+
+[bob in ~] VARIABLE=string
+
+[bob in ~] echo $VARIABLE
+0
+
+[bob in ~] declare -p VARIABLE
+declare -i VARIABLE="0"
+....
+
+Note that Bash has an option to declare a numeric value, but none for
+declaring string values. This is because, by default, if no
+specifications are given, a variable can hold any type of data:
+
+....
+[bob in ~] OTHERVAR=blah
+
+[bob in ~] declare -p OTHERVAR
+declare -- OTHERVAR="blah"
+....
+
+As soon as you restrict assignment of values to a variable, it can only
+hold that type of data. Possible restrictions are either integer,
+constant or array.
+
+See the Bash info pages for information on return status.
+
+[[sect_10_01_03]]
+Constants
+~~~~~~~~~
+
+In Bash, constants are created by making a variable read-only. The
+`readonly` built-in marks each specified variable as unchangeable. The
+syntax is:
+
+readonly
+
+OPTION
+
+VARIABLE(s)
+
+The values of these variables can then no longer be changed by
+subsequent assignment. If the `-f` option is given, each variable refers
+to a shell function; see link:#chap_11[???]. If `-a` is specified, each
+variable refers to an array of variables. If no arguments are given, or
+if `-p` is supplied, a list of all read-only variables is displayed.
+Using the `-p` option, the output can be reused as input.
+
+The return status is zero, unless an invalid option was specified, one
+of the variables or functions does not exist, or `-f` was supplied for a
+variable name instead of for a function name.
+
+....
+[bob in ~] readonly TUX=penguinpower
+
+[bob in ~] TUX=Mickeysoft
+bash: TUX: readonly variable
+....
+
+[[sect_10_02]]
+Array variables
+---------------
+
+[[sect_10_02_01]]
+Creating arrays
+~~~~~~~~~~~~~~~
+
+An array is a variable containing multiple values. Any variable may be
+used as an arrayarraysdeclaration. There is no maximum limit to the size
+of an array, nor any requirement that member variables be indexed or
+assigned contiguously. Arrays are zero-based: the first element is
+indexed with the number 0.
+
+Indirect declaration is done using the following syntax to declare a
+variable:
+
+ARRAY[INDEXNR]
+
+=value
+
+The _INDEXNR_ is treated as an arithmetic expression that must evaluate
+to a positive number.
+
+Explicit declaration of an array is done using the `declare` built-in:
+
+declare
+
+-a
+
+ARRAYNAME
+
+A declaration with an index number will also be accepted, but the index
+number will be ignored. Attributesarraysattributes to the array may be
+specified using the `declare` and `readonly` built-ins. Attributes apply
+to all variables in the array; you can't have mixed arrays.
+
+Array variables may also be created using compound assignments in this
+format:
+
+ARRAY
+
+=(value1 value2 ... valueN)
+
+Each value is then in the form of _[indexnumber=]string_. The index
+number is optional. If it is supplied, that index is assigned to it;
+otherwise the index of the element assigned is the number of the last
+index that was assigned, plus one. This format is accepted by `declare`
+as well. If no index numbers are supplied, indexing starts at zero.
+
+Adding missing or extra members in an arrayarraysadding members is done
+using the syntax:
+
+ARRAYNAME[indexnumber]
+
+=value
+
+Remember that the `read` built-in provides the `-a` option, which allows
+for reading and assigning values for member variables of an array.
+
+[[sect_10_02_02]]
+Dereferencing the variables in an array
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to refer to the content of an item in an
+arrayarraysdereferencing, use curly braces. This is necessary, as you
+can see from the following example, to bypass the shell interpretation
+of expansion operators. If the index number is _@_ or _*_, all members
+of an array are referenced.
+
+....
+[bob in ~] ARRAY=(one two three)
+
+[bob in ~] echo ${ARRAY[*]}
+one two three
+
+[bob in ~] echo $ARRAY[*]
+one[*]
+
+[bob in ~] echo ${ARRAY[2]}
+three
+
+[bob in ~] ARRAY[3]=four
+
+[bob in ~] echo ${ARRAY[*]}
+one two three four
+....
+
+Referring to the content of a member variable of an array without
+providing an index number is the same as referring to the content of the
+first element, the one referenced with index number zero.
+
+[[sect_10_02_03]]
+Deleting array variables
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `unset` built-in is used to destroy arraysarraysunset or member
+variables of an array:
+
+....
+[bob in ~] unset ARRAY[1]
+
+[bob in ~] echo ${ARRAY[*]}
+one three four
+
+[bob in ~] unset ARRAY
+
+[bob in ~] echo ${ARRAY[*]}
+<--no output-->
+....
+
+[[sect_10_02_04]]
+Examples of arrays
+~~~~~~~~~~~~~~~~~~
+
+Practical examples of the usage of arraysarraysexamples are hard to
+find. You will find plenty of scripts that don't really do anything on
+your system but that do use arrays to calculate mathematical series, for
+instance. And that would be one of the more interesting examples...most
+scripts just show what you can do with an array in an oversimplified and
+theoretical way.
+
+The reason for this dullness is that arrays are rather complex
+structures. You will find that most practical examples for which arrays
+could be used are already implemented on your system using arrays,
+however on a lower level, in the C programming language in which most
+UNIX commands are written. A good example is the Bash `history` built-in
+command. Those readers who are interested might check the `built-ins`
+directory in the Bash source tree and take a look at `fc.def`, which is
+processed when compiling the built-ins.
+
+Another reason good examples are hard to find is that not all shells
+support arrays, so they break compatibility.
+
+After long days of searching, I finally found this example operating at
+an Internet provider. It distributes Apache web server configuration
+files onto hosts in a web farm:
+
+....
+#!/bin/bash
+
+if [ $(whoami) != 'root' ]; then
+        echo "Must be root to run $0"
+        exit 1;
+fi
+if [ -z $1 ]; then
+        echo "Usage: $0 </path/to/httpd.conf>"
+        exit 1
+fi
+
+httpd_conf_new=$1
+httpd_conf_path="/usr/local/apache/conf"
+login=htuser
+
+farm_hosts=(web03 web04 web05 web06 web07)
+
+for i in ${farm_hosts[@]}; do
+        su $login -c "scp $httpd_conf_new ${i}:${httpd_conf_path}"
+        su $login -c "ssh $i sudo /usr/local/apache/bin/apachectl graceful"
+
+done
+exit 0
+....
+
+First two tests are performed to check whether the correct user is
+running the script with the correct argumentsargumentstest example. The
+names of the hosts that need to be configured are listed in the array
+`farm_hosts`. Then all these hosts are provided with the Apache
+configuration file, after which the daemon is restarted. Note the use of
+commands from the Secure Shell suite, encrypting the connections to
+remote hosts.
+
+Thanks, Eugene and colleague, for this contribution.
+
+Dan Richter contributed the following example. This is the problem he
+was confronted with:
+
+``...In my company, we have demos on our web site, and every week
+someone has to test all of them. So I have a cron job that fills an
+array with the possible candidates, uses `date +%W` to find the week of
+the year, and does a modulo operation to find the correct index. The
+lucky person gets notified by e-mail.''
+
+And this was his way of solving it:
+
+....
+#!/bin/bash
+# This is get-tester-address.sh 
+#
+# First, we test whether bash supports arrays.
+# (Support for arrays was only added recently.)
+#
+whotest[0]='test' || (echo 'Failure: arrays not supported in this version of
+bash.' && exit 2)
+                                                                                
+#
+# Our list of candidates. (Feel free to add or
+# remove candidates.)
+#
+wholist=(
+     'Bob Smith <bob@example.com>'
+     'Jane L. Williams <jane@example.com>'
+     'Eric S. Raymond <esr@example.com>'
+     'Larry Wall <wall@example.com>'
+     'Linus Torvalds <linus@example.com>'
+   )
+#
+# Count the number of possible testers.
+# (Loop until we find an empty string.)
+#
+count=0
+while [ "x${wholist[count]}" != "x" ]
+do
+   count=$(( $count + 1 ))
+done
+                                                                                
+#
+# Now we calculate whose turn it is.
+#
+week=`date '+%W'`       # The week of the year (0..53).
+week=${week#0}          # Remove possible leading zero.
+                                                                                
+let "index = $week % $count"   # week modulo count = the lucky person
+
+email=${wholist[index]}     # Get the lucky person's e-mail address.
+                                                                                
+echo $email         # Output the person's e-mail address.
+....
+
+This script is then used in other scripts, such as this one, which uses
+a _here_ document:
+
+....
+email=`get-tester-address.sh`   # Find who to e-mail.
+hostname=`hostname`         # This machine's name.
+                                                                                
+#
+# Send e-mail to the right person.
+#
+mail $email -s '[Demo Testing]' <<EOF
+The lucky tester this week is: $email
+                                                                                
+Reminder: the list of demos is here:
+    http://web.example.com:8080/DemoSites
+                                                                                
+(This e-mail was generated by $0 on ${hostname}.)
+EOF
+....
+
+[[sect_10_03]]
+Operations on variables
+-----------------------
+
+[[sect_10_03_01]]
+Arithmetic on variables
+~~~~~~~~~~~~~~~~~~~~~~~
+
+We discussed this already in link:#sect_03_04_05[???].
+
+[[sect_10_03_02]]
+Length of a variable
+~~~~~~~~~~~~~~~~~~~~
+
+Using the `${#VAR}` syntax will calculate the number of characters in a
+variable. If `VAR` is ``*'' or ``@'', this value is substituted with the
+number of positional parameters or number of elements in an
+arrayarraysnumber of elements in general. This is demonstrated in the
+example below:
+
+....
+[bob in ~] echo $SHELL
+/bin/bash
+
+[bob in ~] echo ${#SHELL}
+9
+
+[bob in ~] ARRAY=(one two three)
+
+[bob in ~] echo ${#ARRAY}
+3
+....
+
+[[sect_10_03_03]]
+Transformations of variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_10_03_03_01]]
+Substitution
+^^^^^^^^^^^^
+
+$\{
+
+VAR
+
+:-
+
+WORD
+
+}
+
+If `VAR` is not defined or null, the expansion of `WORD` is substituted;
+otherwise the value of `VAR` is substituted:
+
+....
+[bob in ~] echo ${TEST:-test}
+test
+
+[bob in ~] echo $TEST
+ 
+
+[bob in ~] export TEST=a_string
+
+[bob in ~] echo ${TEST:-test}
+a_string
+
+[bob in ~] echo ${TEST2:-$TEST}
+a_string
+....
+
+This form is often used in conditional tests, for instance in this one:
+
+....
+[ -z "${COLUMNS:-}" ] && COLUMNS=80
+....
+
+It is a shorter notation for
+
+....
+if [ -z "${COLUMNS:-}" ]; then
+    COLUMNS=80
+fi
+....
+
+See link:#sect_07_01_02_03[???] for more information about this type of
+condition testing.
+
+If the hyphen (-) is replaced with the equal sign (=), the value is
+assigned to the parameter if it does not exist:
+
+....
+[bob in ~] echo $TEST2
+
+
+[bob in ~] echo ${TEST2:=$TEST}
+a_string
+
+[bob in ~] echo $TEST2
+a_string
+....
+
+The following syntax tests the existence of a variable. If it is not
+set, the expansion of `WORD` is printed to standard out and
+non-interactive shells quit. A demonstration:
+
+....
+[bob in ~] cat vartest.sh
+#!/bin/bash
+ 
+# This script tests whether a variable is set.  If not,
+# it exits printing a message.
+ 
+echo ${TESTVAR:?"There's so much I still wanted to do..."}
+echo "TESTVAR is set, we can proceed."
+
+[bob in testdir] ./vartest.sh
+./vartest.sh: line 6: TESTVAR: There's so much I still wanted to do...
+
+[bob in testdir] export TESTVAR=present
+
+[bob in testdir] ./vartest.sh
+present
+TESTVAR is set, we can proceed.
+....
+
+Using ``+'' instead of the exclamation mark sets the variable to the
+expansion of `WORD`; if it does not exist, nothing happens.
+
+[[sect_10_03_03_02]]
+Removing substrings
+^^^^^^^^^^^^^^^^^^^
+
+To strip a number of characters, equal to `OFFSET`, from a variable, use
+this syntax:
+
+$\{
+
+VAR
+
+:
+
+OFFSET
+
+:
+
+LENGTH
+
+}
+
+The `LENGTH` parameter defines how many characters to keep, starting
+from the first character after the offset point. If `LENGTH` is omitted,
+the remainder of the variable content is taken:
+
+....
+[bob in ~] export STRING="thisisaverylongname"
+
+[bob in ~] echo ${STRING:4}
+isaverylongname
+
+[bob in ~] echo ${STRING:6:5}
+avery
+....
+
+$\{
+
+VAR
+
+#
+
+WORD
+
+}
+
+and
+
+$\{
+
+VAR
+
+##
+
+WORD
+
+}
+
+These constructs are used for deleting the pattern matching the
+expansion of `WORD` in `VAR`. `WORD` is expanded to produce a pattern
+just as in file name expansion. If the pattern matches the beginning of
+the expanded value of `VAR`, then the result of the expansion is the
+expanded value of `VAR` with the shortest matching pattern (``#'') or
+the longest matching pattern (indicated with ``##'').
+
+If `VAR` is `*` or `@`, the pattern removal operation is applied to each
+positional parameter in turn, and the expansion is the resultant list.
+
+If `VAR` is an array variable subscribed with ``*'' or ``@'', the
+pattern removal operation is applied to each member of the
+arrayarraysremove patterns in turn, and the expansion is the resultant
+list. This is shown in the examples below:
+
+....
+[bob in ~] echo ${ARRAY[*]}
+one two one three one four
+
+[bob in ~] echo ${ARRAY[*]#one}
+two three four
+
+[bob in ~] echo ${ARRAY[*]#t}
+one wo one hree one four
+
+[bob in ~] echo ${ARRAY[*]#t*}
+one wo one hree one four
+
+[bob in ~] echo ${ARRAY[*]##t*}
+one one one four
+....
+
+The opposite effect is obtained using ``%'' and ``%%'', as in this
+example below. `WORD` should match a trailing portion of string:
+
+....
+[bob in ~] echo $STRING
+thisisaverylongname
+
+[bob in ~] echo ${STRING%name}
+thisisaverylong
+....
+
+[[sect_10_03_03_03]]
+Replacing parts of variable names
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is done using the
+
+$\{
+
+VAR
+
+/
+
+PATTERN
+
+/
+
+STRING
+
+}
+
+or
+
+$\{
+
+VAR
+
+//
+
+PATTERN
+
+/
+
+STRING
+
+}
+
+syntax. The first form replaces only the first match, the second
+replaces all matches of `PATTERN` with `STRING`:
+
+....
+[bob in ~] echo ${STRING/name/string}
+thisisaverylongstring
+....
+
+More information can be found in the Bash info pages.
+
+[[sect_10_04]]
+Summary
+-------
+
+Normally, a variable can hold any type of data, unless variables are
+declared explicitly. Constant variables are set using the `readonly`
+built-in command.
+
+An array holds a set of variables. If a type of data is declared, then
+all elements in the array will be set to hold only this type of data.
+
+Bash features allow for substitution and transformation of variables
+``on the fly''. Standard operations include calculating the length of a
+variable, arithmetic on variables, substituting variable content and
+substituting part of the content.
+
+[[sect_10_05]]
+Exercises
+---------
+
+Here are some brain crackers:
+
+1.  Write a script that does the following:
+* Display the name of the script being executed.
+* Display the first, third and tenth argument given to the script.
+* Display the total number of arguments passed to the script.
+* If there were more than three positional parameters, use `shift` to
+move all the values 3 places to the left.
+* Print all the values of the remaining arguments.
+* Print the number of arguments.
++
+Test with zero, one, three and over ten arguments.
+2.  Write a script that implements a simple web browser (in text mode),
+using `wget` and `links -dump` to display HTML pages to the user. The
+user has 3 choices: enter a URL, enter b for back and q to quit. The
+last 10 URLs entered by the user are stored in an array, from which the
+user can restore the URL by using the _back_ functionality.

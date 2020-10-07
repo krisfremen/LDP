@@ -1,0 +1,481 @@
+[[chap_05]]
+The GNU sed stream editor
+-------------------------
+
+____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+--
+At the end of this chapter you will know about the following topics:
+
+* What is `sed`?
+* Interactive use of `sed`
+* Regular expressions and stream editing
+* Using `sed` commands in scripts
+
+____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Note*
+
+These explanations are far from complete and certainly not meant to be
+used as the definite user manual for `sed`. This chapter is only
+included in order to show some more interesting topics in the next
+chapters, and because every power user should have a basic knowledge of
+things that can be done with this editor.
+
+For detailed information, refer to the `sed` info and man pages.
+____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+--
+____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_05_01]]
+Introduction
+------------
+
+[[sect_05_01_01]]
+What is sed?
+~~~~~~~~~~~~
+
+A Stream EDitorseddefinition is used to perform basic transformations on
+text read from a file or a pipe. The result is sent to standard output.
+The syntax for the `sed` command has no output file specification, but
+results can be saved to a file using output redirection. The editor does
+not modify the original input.
+
+What distinguishes `sed` from other editors, such as `vi` and `ed`, is
+its ability to filter text that it gets from a pipeline feed. You do not
+need to interact with the editor while it is running; that is why `sed`
+is sometimes called a _batch editor_. This feature allows use of editing
+commands in scripts, greatly easing repetitive editing tasks. When
+facing replacement of text in a large number of files, `sed` is a great
+help.
+
+[[sect_05_01_02]]
+sed commands
+~~~~~~~~~~~~
+
+The `sedcommandssed` program can perform text pattern substitutions and
+deletions using regular expressionssedcommands, like the ones used with
+the `grep` command; see link:#sect_04_02[???].
+
+The editing commands are similar to the ones used in the `vi` editor:
+
+.Sed editing commands
+[cols=",",options="header",]
+|==================================================
+|Command |Result
+|a\ |Append text below current line.
+|c\ |Change text in the current line with new text.
+|d |Delete text.
+|i\ |Insert text above current line.
+|p |Print text.
+|r |Read a file.
+|s |Search and replace text.
+|w |Write to a file.
+|==================================================
+
+Apart from editing commands, you can give options to `sed`. An
+overviewsedoptions is in the table below:
+
+.Sed options
+[cols=",",options="header",]
+|=======================================================================
+|Option |Effect
+|`-e SCRIPT` |Add the commands in SCRIPT to the set of commands to be
+run while processing the input.
+
+|`-f` |Add the commands contained in the file SCRIPT-FILE to the set of
+commands to be run while processing the input.
+
+|`-n` |Silent mode.
+
+|`-V` |Print version information and exit.
+|=======================================================================
+
+The `sed` info pages contain more information; we only list the most
+frequently used commands and options here.
+
+[[sect_05_02]]
+Interactive editing
+-------------------
+
+[[sect_05_02_01]]
+Printing lines containing a pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is something you can do with `grep`, of course, but you can't do a
+``find and replace'' using that command. This is just to getsedprinting
+lines you started.
+
+This is our example text file:
+
+....
+sandy ~> cat -n example
+     1  This is the first line of an example text.
+     2  It is a text with erors.
+     3  Lots of erors.
+     4  So much erors, all these erors are making me sick.
+     5  This is a line not containing any errors.
+     6  This is the last line.
+
+sandy ~>
+....
+
+We want `sed` to find all the lines containing our search pattern, in
+this case ``erors''. We use the `p` to obtain the result:
+
+....
+sandy ~> sed  '/erors/p' example
+This is the first line of an example text.
+It is a text with erors.
+It is a text with erors.
+Lots of erors.
+Lots of erors.
+So much erors, all these erors are making me sick.
+So much erors, all these erors are making me sick.
+This is a line not containing any errors.
+This is the last line.
+
+sandy ~>
+....
+
+As you notice, `sed` prints the entire file, but the lines containing
+the search string are printed twice. This is not what we want. In order
+to only print those lines matching our pattern, use the `-n` option:
+
+....
+sandy ~> sed -n '/erors/p' example
+It is a text with erors.
+Lots of erors.
+So much erors, all these erors are making me sick.
+
+sandy ~>
+....
+
+[[sect_05_02_02]]
+Deleting lines of input containing a pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We use the same example text file. Now we only want to see the lines
+_not_ containingseddeleting lines the search string:
+
+....
+sandy ~> sed '/erors/d' example
+This is the first line of an example text.
+This is a line not containing any errors.
+This is the last line.
+
+sandy ~>
+....
+
+The `d` command results in excluding lines from being displayed.
+
+Matching lines starting with a given pattern and ending in a second
+pattern are showed like this:
+
+....
+sandy ~> sed -n '/^This.*errors.$/p' example
+This is a line not containing any errors.
+
+sandy ~>
+....
+
+Note that the last dot needs to be escaped in order to actually match.
+In our example the expression just matches any character, including the
+last dot.
+
+[[sect_05_02_03]]
+Ranges of lines
+~~~~~~~~~~~~~~~
+
+This time we want to take out the lines containing the errors. In the
+example these are lines 2 to 4. Specify this rangesedranges of lines to
+address, together with the `d` command:
+
+....
+sandy ~> sed '2,4d' example
+This is the first line of an example text.
+This is a line not containing any errors.
+This is the last line.
+
+sandy ~>
+....
+
+To print the file starting from a certain line until the end of the
+file, use a command similar to this:
+
+....
+sandy ~> sed '3,$d' example
+This is the first line of an example text.
+It is a text with erors.
+
+sandy ~>
+....
+
+This only prints the first two lines of the example file.
+
+The following command prints the first line containing the pattern ``a
+text'', up to and including the next line containing the pattern ``a
+line'':
+
+....
+sandy ~> sed -n '/a text/,/This/p' example
+It is a text with erors.
+Lots of erors.
+So much erors, all these erors are making me sick.
+This is a line not containing any errors.
+
+sandy ~>
+....
+
+[[sect_05_02_04]]
+Find and replace with sed
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the example file, we will now search and replacesedfind and replace
+the errors instead of only (de)selecting the lines containing the search
+string.
+
+....
+sandy ~> sed 's/erors/errors/' example
+This is the first line of an example text.
+It is a text with errors.
+Lots of errors.
+So much errors, all these erors are making me sick.
+This is a line not containing any errors.
+This is the last line.
+
+sandy ~>
+....
+
+As you can see, this is not exactly the desired effect: in line 4, only
+the first occurrence of the search string has been replaced, and there
+is still an 'eror' left. Use the `g` command to indicate to `sed` that
+it should examine the entire line instead of stopping at the first
+occurrence of your string:
+
+....
+sandy ~> sed 's/erors/errors/g' example
+This is the first line of an example text.
+It is a text with errors.
+Lots of errors.
+So much errors, all these errors are making me sick.
+This is a line not containing any errors.
+This is the last line.
+
+sandy ~>
+....
+
+To insert a string at the beginning of each line of a file, for instance
+for quoting:
+
+....
+sandy ~> sed 's/^/> /' example
+> This is the first line of an example text.
+> It is a text with erors.
+> Lots of erors.
+> So much erors, all these erors are making me sick.
+> This is a line not containing any errors.
+> This is the last line.
+
+sandy ~>
+....
+
+Insert some string at the end of each line:
+
+....
+sandy ~> sed 's/$/EOL/' example
+This is the first line of an example text.EOL
+It is a text with erors.EOL
+Lots of erors.EOL
+So much erors, all these erors are making me sick.EOL
+This is a line not containing any errors.EOL
+This is the last line.EOL
+
+sandy ~>
+....
+
+Multiple find and replace commands are separated with individual `-e`
+options:
+
+....
+sandy ~> sed -e 's/erors/errors/g' -e 's/last/final/g' example
+This is the first line of an example text.
+It is a text with errors.
+Lots of errors.
+So much errors, all these errors are making me sick.
+This is a line not containing any errors.
+This is the final line.
+
+sandy ~>
+....
+
+Keep in mind that by default `sed` prints its results to the standard
+output, most likely your terminal window. If you want to save the
+outputsedsave output to a file, redirect it:
+
+sed
+
+option
+
+'some/expression'
+
+file_to_process
+
+>
+
+sed_output_in_a_file
+
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Tip*
+
+Plenty of `sed` examples can be found in the startup scripts for your
+machine, which are usually in `/etc/init.d` or `/etc/rc.d/init.d`.
+Change into the directory containing the initscripts on your system and
+issue the following command:
+
+grep
+
+sed
+
+*
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_05_03]]
+Non-interactive editing
+-----------------------
+
+[[sect_05_03_01]]
+Reading sed commands from a file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Multiple `sed` commands can be put in a file and executed
+usingsednon-interactive editing the `-f` option. When creating such a
+file, make sure that:
+
+* No trailing white spaces exist at the end of lines.
+* No quotes are used.
+* When entering text to add or replace, all except the last line end in
+a backslash.
+
+[[sect_05_03_02]]
+Writing output files
+~~~~~~~~~~~~~~~~~~~~
+
+Writing output is done using the output redirectionsedoutput files
+operator `>`. This is an example scriptsedexample script used to create
+very simple HTML files from plain text files.
+
+....
+sandy ~> cat script.sed
+1i\
+<html>\
+<head><title>sed generated html</title></head>\
+<body bgcolor="#ffffff">\
+<pre>
+$a\
+</pre>\
+</body>\
+</html>
+
+sandy ~> cat txt2html.sh
+#!/bin/bash
+
+# This is a simple script that you can use for converting text into HTML.
+# First we take out all newline characters, so that the appending only happens
+# once, then we replace the newlines.
+
+echo "converting $1..."
+
+SCRIPT="/home/sandy/scripts/script.sed"
+NAME="$1"
+TEMPFILE="/var/tmp/sed.$PID.tmp"
+sed "s/\n/^M/" $1 | sed -f $SCRIPT | sed "s/^M/\n/" > $TEMPFILE
+mv $TEMPFILE $NAME
+
+echo "done."
+
+sandy ~>
+....
+
+`$1` holds the first argument to a given command, in this case the name
+of the file to convert:
+
+....
+sandy ~> cat test
+line1
+line2
+line3
+....
+
+More on positional parameters in link:#chap_07[???].
+
+....
+sandy ~> txt2html.sh test
+converting test...
+done.
+
+sandy ~> cat test
+<html>
+<head><title>sed generated html</title></head>
+<body bgcolor="#ffffff">
+<pre>
+line1
+line2
+line3
+</pre>
+</body>
+</html>
+
+sandy ~>
+....
+
+This is not really how it is done; this example just demonstrates `sed`
+capabilities. See link:#sect_06_03[???] for a more decent solution to
+this problem, using `awk` _BEGIN_ and _END_ constructs.
+
+__________________________________________________________________________________________________________________________________________________
+*Note*
+
+Advanced editors, supporting syntax highlighting, can recognize `sed`
+syntax. This can be a great help if you tend to forget backslashes and
+such.
+__________________________________________________________________________________________________________________________________________________
+
+[[sect_05_04]]
+Summary
+-------
+
+The `sed` stream editor is a powerful command line tool, which can
+handle streams of data: it can take input lines from a pipe. This makes
+it fit for non-interactive use. The `sed` editor uses `vi`-like commands
+and accepts regular expressions.
+
+The `sed` tool can read commands from the command line or from a script.
+It is often used to perform find-and-replace actions on lines containing
+a pattern.
+
+[[sect_05_05]]
+Exercises
+---------
+
+These exercises are meant to further demonstrate what `sed` can do.
+
+1.  Print a list of files in your `scripts` directory, ending in
+``.sh''. Mind that you might have to unalias `ls`. Put the result in a
+temporary file.
+2.  Make a list of files in `/usr/bin` that have the letter ``a'' as the
+second character. Put the result in a temporary file.
+3.  Delete the first 3 lines of each temporary file.
+4.  Print to standard output only the lines containing the pattern
+``an''.
+5.  Create a file holding `sed` commands to perform the previous two
+tasks. Add an extra command to this file that adds a string like ``***
+This might have something to do with man and man pages ***'' in the line
+preceding every occurence of the string ``man''. Check the results.
+6.  A long listing of the root directory, `/`, is used for input. Create
+a file holding `sed` commands that check for symbolic links and plain
+files. If a file is a symbolic link, precede it with a line like
+``--This is a symlink--''. If the file is a plain file, add a string on
+the same line, adding a comment like ``<--- this is a plain file''.
+7.  Create a script that shows lines containing trailing white spaces
+from a file. This script should use a `sed` script and show sensible
+information to the user.

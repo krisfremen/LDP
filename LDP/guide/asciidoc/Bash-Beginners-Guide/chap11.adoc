@@ -1,0 +1,395 @@
+[[chap_11]]
+Functions
+---------
+
+____________________________________________________________
+In this chapter, we will discuss
+
+* What functions are
+* Creation and displaying of functions from the command line
+* Functions in scripts
+* Passing arguments to functions
+* When to use functions
+____________________________________________________________
+
+[[sect_11_01]]
+Introduction
+------------
+
+[[sect_11_01_01]]
+What are functions?
+~~~~~~~~~~~~~~~~~~~
+
+Shell functions are a way to group commands for later execution, using a
+single name for this group, or _routine_. The name of the routine must
+be unique within the shell or script. All the commands that make up a
+function are executed like regular commands. When calling on a function
+as a simple command name, the list of commands associated with that
+function name is executed. A function is executed within the shell in
+which it has been declared: no new process is created to interpret the
+commands.
+
+Special built-in commands are found before shell functions during
+command lookup. The special built-ins are: `break`, `:`, `.`,
+`continue`, `eval`, `exec`, `exit`, `export`, `readonly`, `return`,
+`set`, `shift`, `trap` and `unset`.
+
+[[sect_11_01_02]]
+Function syntax
+~~~~~~~~~~~~~~~
+
+Functions either use the syntax
+
+function FUNCTION \{ COMMANDS; }
+
+or
+
+FUNCTION () \{ COMMANDS; }
+
+Both define a shell function `FUNCTION`. The use of the built-in command
+`function` is optional; however, if it is not used, parentheses are
+needed.
+
+The commands listed between curly braces make up the body of the
+function. These commands are executed whenever `FUNCTION` is specified
+as the name of a command. The exit status is the exit status of the last
+command executed in the body.
+
+____________________________________________________________________________________________________________
+*Note*
+
+The curly braces must be separated from the body by spaces, otherwise
+they are interpreted in the wrong way.
+
+The body of a function should end in a semicolon or a newline.
+____________________________________________________________________________________________________________
+
+[[sect_11_01_03]]
+Positional parameters in functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Functions are like mini-scripts: they can accept parameters, they can
+use variables only known within the function (using the `local` shell
+built-in) and they can return values to the calling shell.
+
+A function also has a system for interpreting positional parameters.
+However, the positional parameters passed to a function are not the same
+as the ones passed to a command or script.
+
+When a function is executed, the argumentsargumentsfunctions to the
+functionfunctionarguments become the positional parameters during its
+execution. The special parameter `#` that expands to the number of
+positional parameters is updated to reflect the change. Positional
+parameter `0` is unchanged. The Bash variable `FUNCNAME` is set to the
+name of the function, while it is executing.
+
+If the `return` built-in is executed in a function, the function
+completes and execution resumes with the next command after the function
+call. When a function completes, the values of the positional parameters
+and the special parameter `#` are restored to the values they had prior
+to the function's execution. If a numeric argument is given to `return`,
+that status is returned. A simplefunctionexample arguments
+exampleargumentsfunction example:
+
+....
+[lydia@cointreau ~/test] cat showparams.sh
+#!/bin/bash
+                                                                                
+echo "This script demonstrates function arguments."
+echo
+                                                                                
+echo "Positional parameter 1 for the script is $1."
+echo
+                                                                                
+test ()
+{
+echo "Positional parameter 1 in the function is $1."
+RETURN_VALUE=$?
+echo "The exit code of this function is $RETURN_VALUE."
+}
+                                                                                
+test other_param
+
+[lydia@cointreau ~/test] ./showparams.sh parameter1
+This script demonstrates function arguments.
+ 
+Positional parameter 1 for the script is parameter1.
+ 
+Positional parameter 1 in the function is other_param.
+The exit code of this function is 0.
+
+[lydia@cointreau ~/test]
+....
+
+Note that the return value or exit code of the function is often storen
+in a variable, so that it can be probed at a later point. The init
+scripts on your system often use the technique of probing the `RETVAL`
+variable in a conditional test, like this one:
+
+....
+if [ $RETVAL -eq 0 ]; then
+    <start the daemon>
+....
+
+Or like this example from the `/etc/init.d/amd` script, where Bash's
+optimization features are used:
+
+....
+[ $RETVAL = 0 ] && touch /var/lock/subsys/amd
+....
+
+The commands after `&&` are only executed when the test proves to be
+true; this is a shorter way to represent an `if/then/fi` structure.
+
+The return code of the function is often used as exit code of the entire
+script. You'll see a lot of initscripts ending in something like
+`exit $RETVAL`.
+
+[[sect_11_01_04]]
+Displaying functions
+~~~~~~~~~~~~~~~~~~~~
+
+All functions known by the current shell can be displayed using the
+`set` built-in without options. Functions are retained after they are
+used, unless they are `unset` after use. The `which` command also
+displays functions:
+
+....
+[lydia@cointreau ~] which zless
+zless is a function
+zless ()
+{
+    zcat "$@" | "$PAGER"
+}
+
+[lydia@cointreau ~] echo $PAGER
+less
+....
+
+This is the sort of function that is typically configured in the user's
+shell resource configuration files. Functions are more flexible than
+aliases and provide a simple and easy way of adapting the user
+environment.
+
+Here's one for DOS users:
+
+....
+dir ()
+{
+    ls -F --color=auto -lF --color=always "$@" | less -r
+}
+....
+
+[[sect_11_02]]
+Examples of functions in scripts
+--------------------------------
+
+[[sect_11_02_01]]
+Recycling
+~~~~~~~~~
+
+There are plenty of scripts on your system that use functions as a
+structured way of handling series of commands. On some Linux systems,
+for instance, you will find the `/etc/rc.d/init.d/functions` definition
+file, which is sourced in all init scripts. Using this method, common
+tasks such as checking if a process runs, starting or stopping a daemon
+and so on, only have to be written once, in a general way. If the same
+task is needed again, the code is recycled.
+
+You could make your own `/etc/functions` file that contains all
+functions that you use regularly on your system, in different scripts.
+Just put the line
+
+.
+
+/etc/functions
+
+somewhere at the start of the script and you can recycle functions.
+
+[[sect_11_02_02]]
+Setting the path
+~~~~~~~~~~~~~~~~
+
+This section might be found in your `/etc/profile` file. The function
+`pathmunge` is defined and then used to set the path for the _root_ and
+other users:
+
+....
+pathmunge () {
+        if ! echo $PATH | /bin/egrep -q "(^|:)$1($|:)" ; then
+           if [ "$2" = "after" ] ; then
+              PATH=$PATH:$1
+           else
+              PATH=$1:$PATH
+           fi
+        fi
+}
+
+# Path manipulation
+if [ `id -u` = 0 ]; then
+        pathmunge /sbin
+        pathmunge /usr/sbin
+        pathmunge /usr/local/sbin
+fi
+
+pathmunge /usr/X11R6/bin after
+
+unset pathmunge
+....
+
+The function takes its first argument to be a path name. If this path
+name is not yet in the current path, it is added. The second argument to
+the function defines if the path will be added in front or after the
+current `PATH` definition.
+
+Normal users only get `/usr/X11R6/bin` added to their paths, while
+_root_ gets a couple of extra directories containing system commands.
+After being used, the function is unset so that it is not retained.
+
+[[sect_11_02_03]]
+Remote backups
+~~~~~~~~~~~~~~
+
+The following example is one that I use for making backups of the files
+for my books. It uses SSH keys for enabling the remote connection. Two
+functions are defined, `buplinux` and `bupbash`, that each make a `.tar`
+file, which is then compressed and sent to a remote server. After that,
+the local copy is cleaned up.
+
+On Sunday, only `bupbash` is executed.
+
+....
+#/bin/bash
+
+LOGFILE="/nethome/tille/log/backupscript.log"
+echo "Starting backups for `date`" >> "$LOGFILE"
+
+buplinux()
+{
+DIR="/nethome/tille/xml/db/linux-basics/"
+TAR="Linux.tar"
+BZIP="$TAR.bz2"
+SERVER="rincewind"
+RDIR="/var/www/intra/tille/html/training/"
+
+cd "$DIR"
+tar cf "$TAR" src/*.xml src/images/*.png src/images/*.eps
+echo "Compressing $TAR..." >> "$LOGFILE"
+bzip2 "$TAR"
+echo "...done." >> "$LOGFILE"
+echo "Copying to $SERVER..." >> "$LOGFILE"
+scp "$BZIP" "$SERVER:$RDIR" > /dev/null 2>&1
+echo "...done." >> "$LOGFILE"
+echo -e "Done backing up Linux course:\nSource files, PNG and EPS images.\nRubbish removed." >> "$LOGFILE"
+rm "$BZIP"
+}
+
+bupbash()
+{
+DIR="/nethome/tille/xml/db/"
+TAR="Bash.tar"
+BZIP="$TAR.bz2"
+FILES="bash-programming/"
+SERVER="rincewind"
+RDIR="/var/www/intra/tille/html/training/"
+
+cd "$DIR"
+tar cf "$TAR" "$FILES"
+echo "Compressing $TAR..." >> "$LOGFILE"
+bzip2 "$TAR"
+echo "...done." >> "$LOGFILE"
+echo "Copying to $SERVER..." >> "$LOGFILE"
+scp "$BZIP" "$SERVER:$RDIR" > /dev/null 2>&1
+echo "...done." >> "$LOGFILE"
+
+echo -e "Done backing up Bash course:\n$FILES\nRubbish removed." >> "$LOGFILE"
+rm "$BZIP"
+}
+
+DAY=`date +%w`
+
+if [ "$DAY" -lt "2" ]; then
+  echo "It is `date +%A`, only backing up Bash course." >> "$LOGFILE"
+  bupbash
+else
+  buplinux
+  bupbash
+fi
+
+
+echo -e "Remote backup `date` SUCCESS\n----------" >> "$LOGFILE"
+....
+
+This script runs from cron, meaning without user interaction, so we
+redirect standard error from the `scp` command to `/dev/null`.
+
+It might be argued that all the separate steps can be combined in a
+command such as
+
+tar
+
+c
+
+dir_to_backup/
+
+| bzip2 | ssh
+
+server
+
+"cat >
+
+backup.tar.bz2
+
+"
+
+However, if you are interested in intermediate results, which might be
+recovered upon failure of the script, this is not what you want.
+
+The expression
+
+command &>
+
+file
+
+is equivalent to
+
+command >
+
+file
+
+2>&1
+
+[[sect_11_03]]
+Summary
+-------
+
+Functions provide an easy way of grouping commands that you need to
+execute repetitively. When a function is running, the positional
+parameters are changed to those of the function. When it stops, they are
+reset to those of the calling program. Functions are like mini-scripts,
+and just like a script, they generate exit or return codes.
+
+While this was a short chapter, it contains important knowledge needed
+for achieving the ultimate state of laziness that is the typical goal of
+any system administrator.
+
+[[sect_11_04]]
+Exercises
+---------
+
+Here are some useful things you can do using functions:
+
+1.  Add a function to your `~/.bashrc` config file that automates the
+printing of man pages. The result should be that you type something like
+`printman <command>`, upon which the first appropriate man page rolls
+out of your printer. Check using a pseudo printer device for testing
+purposes.
++
+As an extra, build in a possibility for the user to supply the section
+number of the man page he or she wants to print.
+2.  Create a subdirectory in your home directory in which you can store
+function definitions. Put a couple of functions in that directory.
+Useful functions might be, amongs others, that you have the same
+commands as on DOS or a commercial UNIX when working with Linux, or vice
+versa. These functions should then be imported in your shell environment
+when `~/.bashrc` is read.

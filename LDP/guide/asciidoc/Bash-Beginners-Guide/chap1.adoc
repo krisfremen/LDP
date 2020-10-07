@@ -1,0 +1,1029 @@
+[[chap_01]]
+Bash and Bash scripts
+---------------------
+
+____________________________________________
+In this introduction module we
+
+* Describe some common shells
+* Point out GNU Bash advantages and features
+* Describe the shell's building blocks
+* Discuss Bash initialization files
+* See how the shell executes commands
+* Look into some simple script examples
+____________________________________________
+
+[[sect_01_01]]
+Common shell programs
+---------------------
+
+[[sect_01_01_01]]
+General shell functions
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The UNIX shellshellgeneral functions program interprets user commands,
+which are either directly entered by the user, or which can be read from
+a file called the shell script or shell program. Shell scripts are
+interpreted, not compiled. The shell reads commands from the script line
+per line and searches for those commands on the system (see
+link:#sect_01_02[Advantages of the Bourne Again SHell]), while a
+compiler converts a program into machine readable form, an executable
+file - which may then be used in a shell script.
+
+Apart from passing commands to the kernel, the main task of a shell is
+providing a user environment, which can be configured individually using
+shell resource configuration files.
+
+[[sect_01_01_02]]
+Shell types
+~~~~~~~~~~~
+
+Just like people know different languages and dialects, your UNIX system
+will usually offer a variety of shellshelltypes types:
+
+* `sh` or Bourne Shell: the original shell still used on UNIX systems
+and in UNIX-related environments. This is the basic shell, a small
+program with few features. While this is not the standard shell, it is
+still available on every Linux system for compatibility with UNIX
+programs.
+* `bash` or Bourne Again shell: the standard GNU shell, intuitive and
+flexible. Probably most advisable for beginning users while being at the
+same time a powerful tool for the advanced and professional user. On
+Linux, `bash` is the standard shell for common users. This shell is a
+so-called _superset_ of the Bourne shell, a set of add-ons and plug-ins.
+This means that the Bourne Again shell is compatible with the Bourne
+shell: commands that work in `sh`, also work in `bash`. However, the
+reverse is not always the case. All examples and exercises in this book
+use `bash`.
+* `csh` or C shell: the syntax of this shell resembles that of the C
+programming language. Sometimes asked for by programmers.
+* `tcsh` or TENEX C shell: a superset of the common C shell, enhancing
+user-friendliness and speed. That is why some also call it the Turbo C
+shell.
+* `ksh` or the Korn shell: sometimes appreciated by people with a UNIX
+background. A superset of the Bourne shell; with standard configuration
+a nightmare for beginning users.
+
+The file `/etc/shells` gives an overview of known shells on a Linux
+systemconfiguration files/etc/shells:
+
+....
+mia:~> cat /etc/shells
+/bin/bash
+/bin/sh
+/bin/tcsh
+/bin/csh
+....
+
+Your default shell is set in the `/etc/passwd` fileconfiguration
+files/etc/passwd, like this line for user _mia_:
+
+....
+mia:L2NOfqdlPrHwE:504:504:Mia Maya:/home/mia:/bin/bash
+....
+
+To switchshellswitch between shells from one shell to another, just
+enter the name of the new shell in the active terminal. The system finds
+the directory where the name occurs using the `PATH` settings, and since
+a shell is an executable file (program), the current shell activates it
+and it gets executed. A new prompt is usually shown, because each shell
+has its typical appearance:
+
+....
+mia:~> tcsh
+[mia@post21 ~]$
+....
+
+[[sect_01_02]]
+Advantages of the Bourne Again SHell
+------------------------------------
+
+[[sect_01_02_01]]
+Bash is the GNU shell
+~~~~~~~~~~~~~~~~~~~~~
+
+The GNU project (GNU's Not UNIX) provides tools for UNIX-like system
+administration which are free software and comply to UNIX standards.
+
+BashBashadvantages is an sh-compatible shell that incorporates useful
+features from the Korn shell (ksh) and C shell (csh). It is intended to
+conform to the IEEE POSIX P1003.2/ISO 9945.2 Shell and Tools standard.
+It offers functional improvements over sh for both programming and
+interactive use; these include command line editing, unlimited size
+command history, job control, shell functions and aliases, indexed
+arrays of unlimited size, and integer arithmetic in any base from two to
+sixty-four. Bash can run most sh scripts without modification.
+
+Like the other GNU projects, the bash initiative was started to
+preserve, protect and promote the freedom to use, study, copy, modify
+and redistribute software. It is generally known that such conditions
+stimulate creativity. This was also the case with the bash program,
+which has a lot of extra features that other shells can't offer.
+
+[[sect_01_02_02]]
+Features only found in bash
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_01_02_02_01]]
+Invocation
+^^^^^^^^^^
+
+In additionBashfeatures to the single-character shell command line
+options which can generally be configured using the `set` shell built-in
+command, there are several multi-character options that you can use. We
+will come across a couple of the more popular optionsfeaturesinvocation
+in this and the following chapters; the complete list can be found in
+the Bash info pages, Bash features > Invoking Bash.
+
+[[sect_01_02_02_02]]
+Bash startup files
+^^^^^^^^^^^^^^^^^^
+
+StartupBashstartup files files are scripts that are read and executed by
+Bash when it starts. The following subsectionsfeaturesstartup files
+describe different ways to start the shell, and the startup files that
+are read consequently.
+
+[[sect_01_02_02_02_01]]
+Invoked as an interactive login shell, or with `--login'
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Interactiveinvocationinteractive login shell means you can enter
+commands. The shell is not running because a script has been activated.
+A login shell means that you got the shell after authenticating to the
+system, usually by giving your user name and password.
+
+Files read:
+
+* `/etc/profile`
+* `~/.bash_profile`, `~/.bash_login` or `~/.profile`: first existing
+readable file is read
+* `~/.bash_logout` upon logout.
+
+Error messages are printed if configuration files exist but are not
+readable. If a file does not exist, bash searches for the next.
+
+[[sect_01_02_02_02_02]]
+Invoked as an interactive non-login shell
++++++++++++++++++++++++++++++++++++++++++
+
+A non-logininvocationinteractive non-login shell shell means that you
+did not have to authenticate to the system. For instance, when you open
+a terminal using an icon, or a menu item, that is a non-login shell.
+
+Files read:
+
+* `~/.bashrc`
+
+This file is usually referred to in `~/.bash_profile`:
+
+if
+
+[ -f
+
+~/.bashrc
+
+]
+
+; then .
+
+~/.bashrc
+
+; fi
+
+See link:#chap_07[???] for more information on the `if` construct.
+
+[[sect_01_02_02_02_03]]
+Invoked non-interactively
++++++++++++++++++++++++++
+
+All scripts use non-interactiveinvocationnon-interactive shells. They
+are programmed to do certain tasks and cannot be instructed to do other
+jobs than those for which they are programmed.
+
+Files read:
+
+* definedvariablesBASH_ENV by `BASH_ENV`
+
+`PATH` is not used to search for this file, so if you want to use it,
+best refer to it by giving the full path and file name.
+
+[[sect_01_02_02_02_04]]
+Invoked with the sh command
++++++++++++++++++++++++++++
+
+Bashinvocationinvoked as sh tries to behave as the historical Bourne
+`sh` program while conforming to the POSIX standard as well.
+
+Files read:
+
+* `/etc/profile`
+* `~/.profile`
+
+When invoked interactively, the `ENV` variablevariablesENV can point to
+extra startup information.
+
+[[sect_01_02_02_02_05]]
+POSIX mode
+++++++++++
+
+This optioninvocationPOSIX mode is enabled either using the `set`
+built-in:
+
+set
+
+-o posix
+
+or by calling the `bash` program with the `--posix` option. Bash will
+then try to behave as compliant as possible to the POSIX standard for
+shells. Setting the `POSIXLY_CORRECT` variablevariablesPOSIXLY_CORRECT
+does the same.
+
+Files read:
+
+* defined by `ENV` variable.
+
+[[sect_01_02_02_02_06]]
+Invoked remotely
+++++++++++++++++
+
+Files read when invokedinvocationremote invocation by `rshd`:
+
+* `~/.bashrc`
+
+_________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Warning*
+
+Be aware of the dangers when using tools such as `rlogin`, `telnet`,
+`rsh` and `rcp`. They are intrinsically insecure because confidential
+data is sent over the network unencrypted. If you need tools for remote
+execution, file transfer and so on, use an implementation of Secure
+SHell, generally known as SSH, freely available from
+http://www.openssh.org. Different client programs are available for
+non-UNIX systems as well, see your local software mirror.
+_________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_01_02_02_02_07]]
+Invoked when UID is not equal to EUID
++++++++++++++++++++++++++++++++++++++
+
+No startupinvocationUID <> EUID files are read in this case.
+
+[[sect_01_02_02_03]]
+Interactive shells
+^^^^^^^^^^^^^^^^^^
+
+[[sect_01_02_02_03_01]]
+What is an interactive shell?
++++++++++++++++++++++++++++++
+
+An interactiveshellinteractive shell generally reads from, and writes
+to, a user's terminal: input and output are connected to a terminal.
+Bash interactive behaviorfeaturesinteractive shells is started when the
+`bash` command is called upon without non-option arguments, except when
+the option is a string to read from or when the shell is invoked to read
+from standard input, which allows for positional parameters to be set
+(see link:#chap_03[???] ).
+
+[[sect_01_02_02_03_02]]
+Is this shell interactive?
+++++++++++++++++++++++++++
+
+Test by looking at the content of the special parameter `-`, it contains
+an 'i' when the shell is interactive:
+
+....
+eddy:~> echo $-
+himBH
+....
+
+In non-interactive shells, the prompt, `PS1`, is unset.
+
+[[sect_01_02_02_03_03]]
+Interactive shell behavior
+++++++++++++++++++++++++++
+
+Differences in interactiveinteractive shellbehavior mode:
+
+* Bash reads startup files.
+* Job control enabled by default.
+* Prompts are set, `PS2` is enabled for multi-linevariablesPS2 commands,
+it is usually set to ``>''. This is also the prompt you get when the
+shell thinks you entered an unfinished command, for instance when you
+forget quotes, command structures that cannot be left out, etc.
+* Commands are by default read from the command line using `readline`.
+* Bash interprets the shell option `ignoreeofoptionsignoreeof` instead
+of exiting immediately upon receiving EOF (End Of File).
+* Command history and history expansion are enabled by default. History
+is saved in the file pointed to byvariablesHISTFILE `HISTFILE` when the
+shell exits. By default, `HISTFILE` points to `~/.bash_history`.
+* Alias expansion is enabled.
+* In the absence of traps, the `SIGTERM` signal is ignored.
+* In the absence of traps, `SIGINT` is caught and handled. Thus, typing
+Ctrl+C, for example, will not quit your interactive shell.
+* Sending `SIGHUP` signals to all jobs on exit is configured with the
+`huponexit` option.
+* Commands are executed upon read.
+* Bash checks for mail periodically.
+* Bash can be configured to exit when it encounters unreferenced
+variables. In interactive mode this behavior is disabled.
+* When shell built-in commands encounter redirection errors, this will
+not cause the shell to exit.
+* Special built-ins returning errors when used in POSIX mode don't cause
+the shell to exit. The built-in commands are listed in
+link:#sect_01_03_02[Shell built-in commands].
+* Failure of `exec` will not exit the shell.
+* Parser syntax errors don't cause the shell to exit.
+* Simple spell check for the arguments to the `cd` built-in is enabled
+by default.
+* Automatic exit after the length of time specified in the `TMOUT`
+variable has passed, is enabled.
+
+More information:
+
+* link:#sect_03_02[???]
+* link:#sect_03_06[???]
+* See link:#chap_12[???] for more about signals.
+* link:#sect_03_04[???] discusses the various expansions performed upon
+entering a command.
+
+[[sect_01_02_02_04]]
+Conditionals
+^^^^^^^^^^^^
+
+Conditionalfeaturesconditionals expressions are used by the `[[`
+compound command and by the `test` and `[` built-in commands.
+
+Expressions may be unary or binary. Unary expressions are often used to
+examine the status of a file. You only need one object, for instance a
+file, to do the operation on.
+
+There are string operators and numeric comparison operators as well;
+these are binary operators, requiring two objects to do the operation
+on. If the `FILE` argument to one of the primaries is in the form
+`/dev/fd/N`, then file descriptor N is checked. If the `FILE` argument
+to one of the primaries is one of `/dev/stdin`, `/dev/stdout` or
+`/dev/stderr`, then file descriptor 0, 1 or 2 respectively is checked.
+
+Conditionals are discussed in detail in link:#chap_07[???].
+
+More information about the file descriptors in link:#sect_08_02_03[???].
+
+[[sect_01_02_02_05]]
+Shell arithmetic
+^^^^^^^^^^^^^^^^
+
+The shell allows arithmeticfeaturesshell arithmetic expressions to be
+evaluated, as one of the shell expansions or by the `let` built-in.
+
+Evaluation is done in fixed-width integers with no check for overflow,
+though division by 0 is trapped and flagged as an error. The operators
+and their precedence and associativity are the same as in the C
+language, see link:#chap_03[???].
+
+[[sect_01_02_02_06]]
+Aliases
+^^^^^^^
+
+Aliasesfeaturesaliases allow a string to be substituted for a word when
+it is used as the first word of a simple command. The shell maintains a
+list of aliases that may be set and unset with the `alias` and `unalias`
+commands.
+
+Bash always reads at least one complete line of input before executing
+any of the commands on that line. Aliases are expanded when a command is
+read, not when it is executed. Therefore, an alias definition appearing
+on the same line as another command does not take effect until the next
+line of input is read. The commands following the alias definition on
+that line are not affected by the new alias.
+
+Aliases are expanded when a function definition is read, not when the
+function is executed, because a function definition is itself a compound
+command. As a consequence, aliases defined in a function are not
+available until after that function is executed.
+
+We will discuss aliases in detail in link:#sect_03_05[???].
+
+[[sect_01_02_02_07]]
+Arrays
+^^^^^^
+
+Bash provides one-dimensional arrayfeaturesarrays variables. Any
+variable may be used as an array; the `declare` built-in will explicitly
+declare an array. There is no maximum limit on the size of an array, nor
+any requirement that members be indexed or assigned contiguously. Arrays
+are zero-based. See link:#chap_10[???].
+
+[[sect_01_02_02_08]]
+Directory stack
+^^^^^^^^^^^^^^^
+
+The directory stackfeaturesdirectory stack is a list of recently-visited
+directories. The `pushd` built-inbuilt-inspushd adds directories to the
+stack as it changes the current directory, and the `popd`
+built-inbuilt-inpopd removes specified directories from the stack and
+changes the current directory to the directory removed.
+
+Content can be displayed issuing the `dirs` command or by checking the
+content of the `DIRSTACKvariablesDIRSTACK` variable.
+
+More information about the workings of this mechanism can be found in
+the Bash info pages.
+
+[[sect_01_02_02_09]]
+The prompt
+^^^^^^^^^^
+
+Bash makes playing with the promptfeaturesprompt even more fun. See the
+section _Controlling the Prompt_ in the Bash info pages.
+
+[[sect_01_02_02_10]]
+The restricted shell
+^^^^^^^^^^^^^^^^^^^^
+
+When invoked as `rbashfeaturesrestricted shell` or with the
+`--restrictedoptionsrestricted` or `-r` option, the following
+happensrestricted shellbehavior:
+
+* The `cd` built-in is disabled.
+* Setting or unsetting `SHELLvariablesSHELL`, `PATHvariablesPATH`,
+`ENVvariablesENV` or `BASH_ENVvariablesBASH_ENV` is not possible.
+* Command names can no longer contain slashes.
+* Filenames containing a slash are not allowed with the `.` (`source`)
+built-inbuilt-inssource command.
+* The `hash` built-inbuilt-inshash does not accept slashes with the `-p`
+option.
+* Import of functionsfunctionsrestricted shell at startup is disabled.
+* `SHELLOPTSvariablesSHELLOPTS` is ignored at startup.
+* Output redirection using `>`, `>|`, `><`, `>&`, `&>` and `>>` is
+disabled.
+* The `exec` built-in is disabled.
+* The `-f` and `-d` options are disabled for the `enable`
+built-inbuilt-insenable.
+* A default `PATH` cannot be specified with the `command` built-in.
+* Turning off restricted mode is not possible.
+
+When a command that is found to be a shell script is executed, `rbash`
+turns off any restrictions in the shell spawned to execute the script.
+
+More information:
+
+* link:#sect_03_02[???]
+* link:#sect_03_06[???]
+* Info Bash > Basic Shell Features > Redirections
+* link:#sect_08_02_03[???]: advanced redirection
+
+[[sect_01_03]]
+Executing commands
+------------------
+
+[[sect_01_03_01]]
+General
+~~~~~~~
+
+Bash determines the type of program that is to be
+executecommandsexecutiond. Normal programs are system commands that
+exist in compiled form on your system. When such a program is executed,
+a new process is created because Bash makes an exact copy of itself.
+This child process has the same environment as its parent, only the
+process ID number is different. This procedure is called _forking_.
+
+After the forking process, the address space of the child process is
+overwritten with the new process data. This is done through an _exec_
+call to the system.
+
+The _fork-and-exec_ mechanismcommandsfork-and-exec thus switches an old
+command with a new, while the environment in which the new program is
+executed remains the same, including configuration of input and output
+devices, environment variables and priority. This mechanism is used to
+create all UNIX processes, so it also applies to the Linux operating
+system. Even the first process, `init`, with process ID 1, is forked
+during the boot procedure in the so-called _bootstrapping_ procedure.
+
+[[sect_01_03_02]]
+Shell built-in commands
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Built-in commandscommandsbuilt-in commands are contained within the
+shell itself. When the name of a built-in command is used as the first
+word of a simple command, the shell executes the command directly,
+without creating a new process. Built-in commands are necessary to
+implement functionality impossible or inconvenient to obtain with
+separate utilities.
+
+Bash supports 3 types of built-in commands:
+
+* Bournebuilt-insBourne Shell built-ins Shell built-ins:
++
+`:`, `.`, `break`, `cd`, `continue`, `eval`, `exec`, `exit`, `export`,
+`getopts`, `hash`, `pwd`, `readonly`, `return`, `set`, `shift`, `test`,
+`[`, `times`, `trap`, `umask` and `unset`.
+* Bashbuilt-insBash built-ins built-in commands:
++
+`alias`, `bind`, `builtin`, `command`, `declare`, `echo`, `enable`,
+`help`, `let`, `local`, `logout`, `printf`, `read`, `shopt`, `type`,
+`typeset`, `ulimit` and `unalias`.
+* Specialbuilt-insspecial built-ins built-in commands:
++
+When Bash is executing in POSIX mode, the special built-ins differ from
+other built-in commands in three respects:
+1.  Special built-ins are found before shell functions during command
+lookup.
+2.  If a special built-in returns an error status, a non-interactive
+shell exits.
+3.  Assignment statements preceding the command stay in effect in the
+shell environment after the command completes.
++
+The POSIX special built-ins are `:`, `.`, `break`, `continue`, `eval`,
+`exec`, `exit`, `export`, `readonly`, `return`, `set`, `shift`, `trap`
+and `unset`.
+
+Most of these built-ins will be discussed in the next chapters. For
+those commands for which this is not the case, we refer to the Info
+pages.
+
+[[sect_01_03_03]]
+Executing programs from a script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When the programcommandsscript execution being executed is a shell
+script, bash will create a new bash process using a _fork_. This
+subshell reads the lines from the shell script one line at a time.
+Commands on each line are read, interpreted and executed as if they
+would have come directly from the keyboard.
+
+While the subshell processes each line of the script, the parent shell
+waits for its child process to finish. When there are no more lines in
+the shell script to read, the subshell terminates. The parent shell
+awakes and displays a new prompt.
+
+[[sect_01_04]]
+Building blocks
+---------------
+
+[[sect_01_04_01]]
+Shell building blocks
+~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_01_04_01_01]]
+Shell syntax
+^^^^^^^^^^^^
+
+If input is not commented, the shell readsshellsyntax it and divides it
+into words and operators, employing quoting rules to define the meaning
+of each character of input. Then these words and operators are
+translated into commands and other constructs, which return an exit
+status available for inspection or processing. The above fork-and-exec
+scheme is only applied after the shell has analyzed input in the
+followinginputanalysis way:
+
+* The shell reads its input from a file, from a string or from the
+user's terminal.
+* Input is broken up into words and operators, obeying the quoting
+rules, see link:#chap_03[???]. These tokens are separated by
+_metacharacters_. Alias expansion is performed.
+* The shell _parses_ (analyzes and substitutes) the tokens into simple
+and compound commands.
+* Bash performs various shell expansions, breaking the expanded tokens
+into lists of filenames and commands and arguments.
+* Redirection is performed if necessary, redirection operators and their
+operands are removed from the argument list.
+* Commands are executed.
+* Optionally the shell waits for the command to complete and collects
+its exit status.
+
+[[sect_01_04_01_02]]
+Shell commands
+^^^^^^^^^^^^^^
+
+A simple shell command such as `touch file1 file2 file3` consists of the
+command itself followed by argumentsargumentsto a command, separated by
+spaces.
+
+More complex shell commands are composed of simple commands arranged
+together in a variety of ways: in a pipeline in which the output of one
+command becomes the input of a second, in a loop or conditional
+construct, or in some other grouping. A couple of examples:
+
+ls | more
+
+gunzip
+
+file.tar.gz
+
+| tar
+
+xvf
+
+-
+
+[[sect_01_04_01_03]]
+Shell functions
+^^^^^^^^^^^^^^^
+
+Shell functionsfunctionsexecution are a way to group commands for later
+execution using a single name for the group. They are executed just like
+a ``regular'' command. When the name of a shell function is used as a
+simple command name, the list of commands associated with that function
+name is executed.
+
+Shell functions are executed in the current shell context; no new
+process is created to interpret them.
+
+Functions are explained in link:#chap_11[???].
+
+[[sect_01_04_01_04]]
+Shell parameters
+^^^^^^^^^^^^^^^^
+
+A parametershellparameters is an entity that stores values. It can be a
+name, a number or a special value. For the shell's purpose, a
+variablevariablesdefinition is a parameter that stores a name. A
+variable has a value and zero or more attributes. Variables are created
+with the `declarebuilt-insdeclare` shell built-in command.
+
+If no value is given, a variable is assigned the null string. Variables
+can only be removed with the `unset` built-in.
+
+Assigning variables is discussed in link:#sect_03_02[???], advanced use
+of variables in link:#chap_10[???].
+
+[[sect_01_04_01_05]]
+Shell expansions
+^^^^^^^^^^^^^^^^
+
+Shell expansionshellexpansion is performed after each command line has
+been split into tokens. These are the expansions performed:
+
+* Brace expansion
+* Tilde expansion
+* Parameter and variable expansion
+* Command substitution
+* Arithmetic expansion
+* Word splitting
+* Filename expansion
+
+We'll discuss these expansion types in detail in link:#sect_03_04[???].
+
+[[sect_01_04_01_06]]
+Redirections
+^^^^^^^^^^^^
+
+Before a command is executed, its input and output may be
+redirectedshellredirections using a special notation interpreted by the
+shell. Redirection may also be used to open and close files for the
+current shell execution environment.
+
+[[sect_01_04_01_07]]
+Executing commands
+^^^^^^^^^^^^^^^^^^
+
+When executing a command, the words that the parser has marked as
+variable assignments (preceding the command name) and redirections are
+saved for later reference. Words that are not variable assignments or
+redirections are expanded; the first remaining word after expansion is
+taken to be the name of the command and the rest are
+argumentsargumentsdefinition to that command. Then redirections are
+performed, then strings assigned to variables are expanded. If no
+command name results, variables will affect the current shell
+environment.
+
+An important part of the tasks of the shell is to searchcommandssearch
+for commands for commands. Bash does this as follows:
+
+* Check whether the command contains slashes. If not, first check with
+the function list to see if it contains a command by the name we are
+looking for.
+* If command is not a function, check for it in the built-in list.
+* If command is neither a function nor a built-in, look for it analyzing
+the directories listed in `PATHvariablesPATH`. Bash uses a _hash table_
+(data storage area in memory) to remember the full path names of
+executables so extensive `PATH` searches can be avoided.
+* If the search is unsuccessful, bash prints an error message and
+returns an exit status of 127.
+* If the search was successful or if the command contains slashes, the
+shell executes the command in a separate execution environment.
+* If execution fails because the file is not executable and not a
+directory, it is assumed to be a shell script.
+* If the command was not begun asynchronously, the shell waits for the
+command to complete and collects its exit status.
+
+[[sect_01_04_01_08]]
+Shell scripts
+^^^^^^^^^^^^^
+
+When a file containingfeaturesscripts shell commands is used as the
+first non-option argument when invoking Bash (without `-c` or `-s`, this
+will create a non-interactive shell. This shell first searches for the
+script file in the current directory, then looks in `PATH` if the file
+cannot be found there.
+
+[[sect_01_05]]
+Developing good scripts
+-----------------------
+
+[[sect_01_05_01]]
+Properties of good scripts
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This guide is mainly about the last shell building block, scripts. Some
+general considerationsscriptsconsiderations before we continue:
+
+1.  A script should run without errors.
+2.  It should perform the task for which it is intended.
+3.  Program logic is clearly defined and apparent.
+4.  A script does not do unnecessary work.
+5.  Scripts should be reusable.
+
+[[sect_01_05_02]]
+Structure
+~~~~~~~~~
+
+The structurescriptsstructure of a shell script is very flexible. Even
+though in Bash a lot of freedom is granted, you must ensure correct
+logic, flow control and efficiency so that users executing the script
+can do so easily and correctly.
+
+When starting on a new script, ask yourself the following questions:
+
+* Will I be needing any information from the user or from the user's
+environment?
+* How will I store that information?
+* Are there any files that need to be created? Where and with which
+permissions and ownerships?
+* What commands will I use? When using the script on different systems,
+do all these systems have these commands in the required versions?
+* Does the user need any notifications? When and why?
+
+[[sect_01_05_03]]
+Terminology
+~~~~~~~~~~~
+
+The table below gives an overview of programming termsscriptsterminology
+that you need to be familiar with:
+
+.Overview of programming terms
+[cols=",",options="header",]
+|=======================================================================
+|Term |What is it?
+|Command control |Testing exit status of a command in order to determine
+whether a portion of the program should be executed.
+
+|Conditional branch |Logical point in the program when a condition
+determines what happens next.
+
+|Logic flow |The overall design of the program. Determines logical
+sequence of tasks so that the result is successful and controlled.
+
+|Loop |Part of the program that is performed zero or more times.
+
+|User input |Information provided by an external source while the
+program is running, can be stored and recalled when needed.
+|=======================================================================
+
+[[sect_01_05_04]]
+A word on order and logic
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to speed up the developing process, the logicalscriptslogic
+order of a program should be thought over in advance. This is your first
+step when developing a script.
+
+A number of methods can be used; one of the most common is working with
+lists. Itemizing the list of tasks involved in a program allows you to
+describe each process. Individual tasks can be referenced by their item
+number.
+
+Using your own spoken language to pin down the tasks to be executed by
+your program will help you to create an understandable form of your
+program. Later, you can replace the everyday language statements with
+shell language words and constructs.
+
+The examplescriptslogic flow example below shows such a logic flow
+design. It describes the rotation of log files. This example shows a
+possible repetitive loop, controlled by the number of base log files you
+want to rotate:
+
+1.  Do you want to rotate logs?
+1.  If yes:
+1.  Enter directory name containing the logs to be rotated.
+2.  Enter base name of the log file.
+3.  Enter number of days logs should be kept.
+4.  Make settings permanent in user's crontab file.
+2.  If no, go to step 3.
+2.  Do you want to rotate another set of logs?
+1.  If yes: repeat step 1.
+2.  If no: go to step 3.
+3.  Exit
+
+The user should provide information for the program to do something.
+Input from the user must be obtained and stored. The user should be
+notified that his crontab will change.
+
+[[sect_01_05_05]]
+An examplescriptsexample Bash script: mysystem.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `mysystem.sh` script below executes some well-known commands
+(`date`, `w`, `uname`, `uptime`) to display information about you and
+your machine.
+
+....
+tom:~> cat -n mysystem.sh
+     1  #!/bin/bash
+     2  clear
+     3  echo "This is information provided by mysystem.sh.  Program starts now."
+     4
+     5  echo "Hello, $USER"
+     6  echo
+     7
+     8  echo "Today's date is `date`, this is week `date +"%V"`."
+     9  echo
+    10
+    11  echo "These users are currently connected:"
+    12  w | cut -d " " -f 1 - | grep -v USER | sort -u
+    13  echo
+    14
+    15  echo "This is `uname -s` running on a `uname -m` processor."
+    16  echo
+    17
+    18  echo "This is the uptime information:"
+    19  uptime
+    20  echo
+    21
+    22  echo "That's all folks!"
+....
+
+A script always starts with the same two characters, ``#!''. After that,
+the shell that will execute the commands following the first line is
+defined. This script starts with clearing the screen on line 2. Line 3
+makes it print a message, informing the user about what is going to
+happen. Line 5 greets the user. Lines 6, 9, 13, 16 and 20 are only there
+for orderly output display purposes. Line 8 prints the current date and
+the number of the week. Line 11 is again an informative message, like
+lines 3, 18 and 22. Line 12 formats the output of the `w`; line 15 shows
+operating system and CPU information. Line 19 gives the uptime and load
+information.
+
+Both `echo` and `printf` are Bash built-in commands. The first always
+exits with a 0 status, and simply prints arguments followed by an end of
+line character on the standard output, while the latter allows for
+definition of a formatting string and gives a non-zero exit status code
+upon failure.
+
+This is the same script using the `printf` built-in:
+
+....
+tom:~> cat mysystem.sh
+#!/bin/bash
+clear
+printf "This is information provided by mysystem.sh.  Program starts now.\n"
+
+printf "Hello, $USER.\n\n"
+
+printf "Today's date is `date`, this is week `date +"%V"`.\n\n"
+
+printf "These users are currently connected:\n"
+w | cut -d " " -f 1 - | grep -v USER | sort -u
+printf "\n"
+
+printf "This is `uname -s` running on a `uname -m` processor.\n\n"
+
+printf "This is the uptime information:\n"
+uptime
+printf "\n"
+
+printf "That's all folks!\n"
+....
+
+Creating user friendly scripts by means of inserting messages is treated
+in link:#chap_08[???].
+
+____________________________________________________________
+*Note*
+
+This implies that the `bash` program is installed in `/bin`.
+____________________________________________________________
+
+___________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Warning*
+
+If you execute a script from cron, supply full path names and redirect
+output and errors. Since the shell runs in non-interactive mode, any
+errors will cause the script to exit prematurely if you don't think
+about this.
+___________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+The following chapters will discuss the details of the above scripts.
+
+[[sect_01_05_06]]
+Example init script
+~~~~~~~~~~~~~~~~~~~
+
+An init scriptscriptsinit scripts starts system services on UNIX and
+Linux machines. The system log daemon, the power management daemon, the
+name and mail daemons are common examples. These scripts, also known as
+startup scripts, are stored in a specific location on your system, such
+as `/etc/rc.d/init.d` or `/etc/init.d`. Init, the initial process, reads
+its configuration files and decides which services to start or stop in
+each run level. A run level is a configuration of processes; each system
+has a single user run level, for instance, for performing administrative
+tasks, for which the system has to be in an unused state as much as
+possible, such as recovering a critical file system from a backup.
+Reboot and shutdown run levels are usually also configured.
+
+The tasks to be executed upon starting a service or stopping it are
+listed in the startup scripts. It is one of the system administrator's
+tasks to configure `init`, so that services are started and stopped at
+the correct moment. When confronted with this task, you need a good
+understanding of the startup and shutdown procedures on your system. We
+therefore advise that you read the man pages for `init` and `inittab`
+before starting on your own initialization scripts.
+
+Here is a very simple example, that will play a sound upon
+startingscriptsinit script example and stopping your machine:
+
+....
+#!/bin/bash
+
+# This script is for /etc/rc.d/init.d
+# Link in rc3.d/S99audio-greeting and rc0.d/K01audio-greeting
+
+case "$1" in
+'start')
+  cat /usr/share/audio/at_your_service.au > /dev/audio
+  ;;
+'stop')
+  cat /usr/share/audio/oh_no_not_again.au > /dev/audio
+  ;;
+esac
+exit 0
+....
+
+The `case` statement often used in this kind of script is described in
+link:#sect_07_02_05[???].
+
+[[sect_01_06]]
+Summary
+-------
+
+Bash is the GNU shell, compatible with the Bourne shell and
+incorporating many useful features from other shells. When the shell is
+started, it reads its configuration files. The most important are:
+
+* `/etc/profile`
+* `~/.bash_profile`
+* `~/.bashrc`
+
+Bash behaves different when in interactive mode and also has a POSIX
+compliant and a restricted mode.
+
+Shell commands can be split up in three groups: the shell functions,
+shell built-ins and existing commands in a directory on your system.
+Bash supports additional built-ins not found in the plain Bourne shell.
+
+Shell scripts consist of these commands arranged as shell syntax
+dictates. Scripts are read and executed line per line and should have a
+logical structure.
+
+[[sect_01_07]]
+Exercises
+---------
+
+These are some exercises to warm you up for the next chapter:
+
+1.  Where is the `bash` program located on your system?
+2.  Use the `--version` option to find out which version you are
+running.
+3.  Which shell configuration files are read when you login to your
+system using the graphical user interface and then opening a terminal
+window?
+4.  Are the following shells interactive shells? Are they login shells?
+* A shell opened by clicking on the background of your graphical
+desktop, selecting ``Terminal'' or such from a menu.
+* A shell that you get after issuing the command `ssh localhost`.
+* A shell that you get when logging in to the console in text mode.
+* A shell obtained by the command `xterm &`.
+* A shell opened by the `mysystem.sh` script.
+* A shell that you get on a remote host, for which you didn't have to
+give the login and/or password because you use SSH and maybe SSH keys.
+5.  Can you explain why `bash` does not exit when you type Ctrl+C on the
+command line?
+6.  Display directory stack content.
+7.  If it is not yet the case, set your prompt so that it displays your
+location in the file system hierarchy, for instance add this line to
+`~/.bashrc`:
++
+export
++
+PS1
++
+="
++
+\u@\h \w>
++
+"
+8.  Display hashed commands for your current shell session.
+9.  How many processes are currently running on your system? Use `ps`
+and `wc`, the first line of output of `ps` is not a process!
+10. How to display the system hostname? Only the name, nothing more!

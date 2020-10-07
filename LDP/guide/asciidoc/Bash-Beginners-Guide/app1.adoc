@@ -1,0 +1,189 @@
+[[app3]]
+Shell Features
+--------------
+
+__________________________________________________________________________________________________________________________________________________
+This document gives an overview of common shell features (the same in
+every shell flavour) and differing shell features (shell specific
+features).
+__________________________________________________________________________________________________________________________________________________
+
+Common features
+---------------
+
+The following features are standard in every shell. Note that the stop,
+suspend, jobs, bg and fg commands are only available on systems that
+support job control.
+
+.Common Shell Features
+[cols=",",options="header",]
+|==========================================================
+|Command |Meaning
+|> |Redirect output
+|>> |Append to file
+|< |Redirect input
+|<< |"Here" document (redirect input)
+|| |Pipe output
+|& |Run process in background.
+|; |Separate commands on same line
+|* |Match any character(s) in filename
+|? |Match single character in filename
+|[ ] |Match any characters enclosed
+|( ) |Execute in subshell
+|` ` |Substitute output of enclosed command
+|" " |Partial quote (allows variable and command expansion)
+|' ' |Full quote (no expansion)
+|\ |Quote following character
+|$var |Use value for variable
+|$$ |Process id
+|$0 |Command name
+|$n |nth argument (n from 0 to 9)
+|`#` |Begin comment
+|bg |Background execution
+|break |Break from loop statements
+|cd |Change directories
+|continue |Resume a program loop
+|echo |Display output
+|eval |Evaluate arguments
+|exec |Execute a new shell
+|fg |Foreground execution
+|jobs |Show active jobs
+|kill |Terminate running jobs
+|newgrp |Change to a new group
+|shift |Shift positional parameters
+|stop |Suspend a background job
+|suspend |Suspend a foreground job
+|time |Time a command
+|umask |Set or list file permissions
+|unset |Erase variable or function definitions
+|wait |Wait for a background job to finish
+|==========================================================
+
+Differing features
+------------------
+
+The table below shows major differences between the standard shell
+(`sh`), Bourne Again SHell (`bash`), Korn shell (`ksh`) and the C shell
+(`csh`).
+
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Note*
+
+Since the Bourne Again SHell is a superset of `sh`, all `sh` commands
+will also work in `bash` - but not vice versa. `bash` has many more
+features of its own, and, as the table below demonstrates, many features
+incorporated from other shells.
+
+Since the Turbo C shell is a superset of `csh`, all `csh` commands will
+work in `tcsh`, but not the other way round.
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+.Differing Shell Features
+[cols=",,,,",options="header",]
+|=======================================================================
+|`sh` |`bash` |`ksh` |`csh` |Meaning/Action
+|$ |$ |$ |% |Default user prompt
+
+| |`>|` |`>|` |`>!` |Force redirection
+
+|`> file 2>&1` |`&> file` or `> file 2>&1` |`> file 2>&1` |`>& file`
+|Redirect stdout and stderr to `file`
+
+| |`{ }` | |`{ }` |Expand elements in list
+
+|`\`command\`` |`\`command\`` or `$(command)` |`$(command)`
+|`\`command\`` |Substitute output of enclosed `command`
+
+|`$HOME` |`$HOME` |`$HOME` |`$home` |Home directory
+
+| |~ |~ |~ |Home directory symbol
+
+| |`~+`, `~-`, `dirs` |`~+`, `~-` |`=-`, `=N` |Access directory stack
+
+|`var=value` |`VAR=value` |`var=value` |`set var=value` |Variable
+assignment
+
+|`export var` |`export VAR=value` |`export var=val` |`setenv var val`
+|Set environment variable
+
+| |`${nnnn}` |`${nn}` | |More than 9 arguments can be referenced
+
+|"`$@`" |"`$@`" |"`$@`" | |All arguments as separate words
+
+|`$#` |`$#` |`$#` |`$#argv` |Number of arguments
+
+|`$?` |`$?` |`$?` |`$status` |Exit status of the most recently executed
+command
+
+|`$!` |`$!` |`$!` | |PID of most recently backgrounded process
+
+|`$-` |`$-` |`$-` | |Current options
+
+|`. file` |`source file` or `. file` |`. file` |`source file` |Read
+commands in file
+
+| |`alias x='y'` |`alias x=y` |`alias x y` |Name `x` stands for command
+`y`
+
+|`case` |`case` |`case` |`switch` or `case` |Choose alternatives
+
+|`done` |`done` |`done` |`end` |End a loop statement
+
+|`esac` |`esac` |`esac` |`endsw` |End `case` or `switch`
+
+|`exit n` |`exit n` |`exit n` |`exit (expr)` |Exit with a status
+
+|`for`/`do` |`for`/`do` |`for`/`do` |`foreach` |Loop through variables
+
+| |`set -f`, `set -o nullglob|dotglob|nocaseglob|noglob` | |`noglob`
+|Ignore substitution characters for filename generation
+
+|`hash` |`hash` |`alias -t` |`hashstat` |Display hashed commands
+(tracked aliases)
+
+|`hash cmds` |`hash cmds` |`alias -t cmds` |`rehash` |Remember command
+locations
+
+|`hash -r` |`hash -r` | |`unhash` |Forget command locations
+
+| |`history` |`history` |`history` |List previous commands
+
+| |ArrowUp+Enter or `!!` |`r` |`!!` |Redo previous command
+
+| |`!str` |`r str` |`!str` |Redo last command that starts with ``str''
+
+| |`!cmd:s/x/y/` |`r x=y cmd` |`!cmd:s/x/y/` |Replace ``x'' with ``y''
+in most recent command starting with ``cmd'', then execute.
+
+|`if [ $i -eq 5 ]` |`if [ $i -eq 5 ]` |`if ((i==5))` |`if ($i==5)`
+|Sample condition test
+
+|`fi` |`fi` |`fi` |`endif` |End `if` statement
+
+|`ulimit` |`ulimit` |`ulimit` |`limit` |Set resource limits
+
+|`pwd` |`pwd` |`pwd` |`dirs` |Print working directory
+
+|`read` |`read` |`read` |`$<` |Read from terminal
+
+|`trap 2` |`trap 2` |`trap 2` |`onintr` |Ignore interrupts
+
+| |`unalias` |`unalias` |`unalias` |Remove aliases
+
+|`until` |`until` |`until` | |Begin `until` loop
+
+|`while`/`do` |`while`/`do` |`while`/`do` |`while` |Begin `while` loop
+|=======================================================================
+
+The Bourne Again SHell has many more features not listed here. This
+table is just to give you an idea of how this shell incorporates all
+useful ideas from other shells: there are no blanks in the column for
+`bash`. More information on features found only in Bash can be retrieved
+from the Bash info pages, in the ``Bash Features'' section.
+
+More information:
+
+You should at least read one manual, being the manual of your shell. The
+preferred choice would be `info bash`, `bash` being the GNU shell and
+easiest for beginners. Print it out and take it home, study it whenever
+you have 5 minutes.

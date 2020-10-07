@@ -1,0 +1,994 @@
+[[chap_07]]
+Conditional statements
+----------------------
+
+____________________________________________________________________________________________________________
+In this chapter we will discuss the use of conditionals in Bash scripts.
+This includes the following topics:
+
+* The `if` statement
+* Using the exit status of a command
+* Comparing and testing input and files
+* `if/then/else` constructs
+* `if/then/elif/else` constructs
+* Using and testing the positional parameters
+* Nested `if` statements
+* Boolean expressions
+* Using `case` statements
+____________________________________________________________________________________________________________
+
+[[sect_07_01]]
+Introduction to if
+------------------
+
+[[sect_07_01_01]]
+General
+~~~~~~~
+
+At times you need to specify different courses of action to be taken in
+a shell script, depending on the success or failure of a command. The
+`if` construction allows you to specify such conditions.
+
+The most compact syntax of the `if` command is:
+
+if TEST-COMMANDS; then CONSEQUENT-COMMANDS; fi
+
+The `TEST-COMMAND` list is executed, and if its return status is zero,
+the `CONSEQUENT-COMMANDS` list is executed. The return status is the
+exit status of the last command executed, or zero if no condition tested
+true.
+
+The `TEST-COMMAND` often involves numerical or string comparison tests,
+but it can also be any command that returns a status of zero when it
+succeeds and some other status when it fails. Unary expressions are
+often used to examine the status of a file. If the `FILE` argument to
+one of the primaries is of the form `/dev/fd/N`, then file descriptor
+``N'' is checked. `stdin`, `stdout` and `stderr` and their respective
+file descriptors may also be used for tests.
+
+[[sect_07_01_01_01]]
+Expressions used with if
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The table below contains an overview of the so-called ``primaries'' that
+make up the `TEST-COMMAND` command or list of commands. These primaries
+are put between square brackets to indicate the test of a conditional
+expression.
+
+.Primary expressions
+[cols=",",options="header",]
+|=======================================================================
+|Primary |Meaning
+|[ `-a` `FILE` ] |True if `FILE` exists.
+
+|[ `-b` `FILE` ] |True if `FILE` exists and is a block-special file.
+
+|[ `-c` `FILE` ] |True if `FILE` exists and is a character-special file.
+
+|[ `-d` `FILE` ] |True if `FILE` exists and is a directory.
+
+|[ `-e` `FILE` ] |True if `FILE` exists.
+
+|[ `-f` `FILE` ] |True if `FILE` exists and is a regular file.
+
+|[ `-g` `FILE` ] |True if `FILE` exists and its SGID bit is set.
+
+|[ `-h` `FILE` ] |True if `FILE` exists and is a symbolic link.
+
+|[ `-k` `FILE` ] |True if `FILE` exists and its sticky bit is set.
+
+|[ `-p` `FILE` ] |True if `FILE` exists and is a named pipe (FIFO).
+
+|[ `-r` `FILE` ] |True if `FILE` exists and is readable.
+
+|[ `-s` `FILE` ] |True if `FILE` exists and has a size greater than
+zero.
+
+|[ `-t` `FD` ] |True if file descriptor `FD` is open and refers to a
+terminal.
+
+|[ `-u` `FILE` ] |True if `FILE` exists and its SUID (set user ID) bit
+is set.
+
+|[ `-w` `FILE` ] |True if `FILE` exists and is writable.
+
+|[ `-x` `FILE` ] |True if `FILE` exists and is executable.
+
+|[ `-O` `FILE` ] |True if `FILE` exists and is owned by the effective
+user ID.
+
+|[ `-G` `FILE` ] |True if `FILE` exists and is owned by the effective
+group ID.
+
+|[ `-L` `FILE` ] |True if `FILE` exists and is a symbolic link.
+
+|[ `-N` `FILE` ] |True if `FILE` exists and has been modified since it
+was last read.
+
+|[ `-S` `FILE` ] |True if `FILE` exists and is a socket.
+
+|[ `FILE1` `-nt` `FILE2` ] |True if `FILE1` has been changed more
+recently than `FILE2`, or if `FILE1` exists and `FILE2` does not.
+
+|[ `FILE1` `-ot` `FILE2` ] |True if `FILE1` is older than `FILE2`, or is
+`FILE2` exists and `FILE1` does not.
+
+|[ `FILE1` `-ef` `FILE2` ] |True if `FILE1` and `FILE2` refer to the
+same device and inode numbers.
+
+|[ `-o` OPTIONNAME ] |True if shell option ``OPTIONNAME'' is enabled.
+
+|`[ -z` STRING ] |True if the length of ``STRING'' is zero.
+
+|`[ -n` STRING ] or [ STRING ] |True if the length of ``STRING'' is
+non-zero.
+
+|[ STRING1 == STRING2 ] |True if the strings are equal. ``='' may be
+used instead of ``=='' for strict POSIX compliance.
+
+|[ STRING1 != STRING2 ] |True if the strings are not equal.
+
+|[ STRING1 < STRING2 ] |True if ``STRING1'' sorts before ``STRING2''
+lexicographically in the current locale.
+
+|[ STRING1 > STRING2 ] |True if ``STRING1'' sorts after ``STRING2''
+lexicographically in the current locale.
+
+|[ ARG1 OP ARG2 ] |``OP'' is one of `-eq`, `-ne`, `-lt`, `-le`, `-gt` or
+`-ge`. These arithmeticarithmetic expansionoperators binary operators
+return true if ``ARG1'' is equal to, not equal to, less than, less than
+or equal to, greater than, or greater than or equal to ``ARG2'',
+respectively. ``ARG1'' and ``ARG2'' are integers.
+|=======================================================================
+
+Expressions may be combined using the following operators, listed in
+decreasing order of precedence:
+
+.Combining expressions
+[cols=",",options="header",]
+|=======================================================================
+|Operation |Effect
+|[ ! EXPR ] |True if `EXPR` is false.
+
+|[ ( EXPR ) ] |Returns the value of `EXPR`. This may be used to override
+the normal precedence of operators.
+
+|[ EXPR1 -a EXPR2 ] |True if both `EXPR1` and `EXPR2` are true.
+
+|[ EXPR1 -o EXPR2 ] |True if either `EXPR1` or `EXPR2` is true.
+|=======================================================================
+
+The `[` (or `test`) built-in evaluates conditional expressions using a
+set of rules based on the number of arguments. More information about
+this subject can be found in the Bash documentation. Just like the `if`
+is closed with `fi`, the opening square bracket should be closed after
+the conditions have been listed.
+
+[[sect_07_01_01_02]]
+Commands following the then statement
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `CONSEQUENT-COMMANDS` list that follows the `then` statement can be
+any valid UNIX command, any executable program, any executable shell
+script or any shell statement, with the exception of the closing `fi`.
+It is important to remember that the `then` and `fi` are considered to
+be separated statements in the shell. Therefore, when issued on the
+command line, they are separated by a semi-colon.
+
+In a script, the different parts of the `if` statement are usually
+well-separated. Below, a couple of simple examples.
+
+[[sect_07_01_01_03]]
+Checking files
+^^^^^^^^^^^^^^
+
+The first example checks for the existence of a file:
+
+....
+anny ~> cat msgcheck.sh
+#!/bin/bash
+
+echo "This scripts checks the existence of the messages file."
+echo "Checking..."
+if [ -f /var/log/messages ]
+  then
+    echo "/var/log/messages exists."
+fi
+echo
+echo "...done."
+
+anny ~> ./msgcheck.sh
+This scripts checks the existence of the messages file.
+Checking...
+/var/log/messages exists.
+
+...done.
+....
+
+[[sect_07_01_01_04]]
+Checking shell options
+^^^^^^^^^^^^^^^^^^^^^^
+
+To add in your Bash configuration files:
+
+....
+# These lines will print a message if the noclobber option is set:
+
+if [ -o noclobber ]
+  then
+    echo "Your files are protected against accidental overwriting using redirection."
+fi
+....
+
+________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Note*
+
+The above example will work when entered on the command line:
+
+....
+anny ~> if [ -o noclobber ] ; then echo ; echo "your files are protected
+against overwriting." ; echo ; fi
+
+your files are protected against overwriting.
+
+anny ~>
+....
+
+However, if you use testing of conditions that depend on the
+environment, you might get different results when you enter the same
+command in a script, because the script will open a new shell, in which
+expected variables and options might not be set automatically.
+________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_07_01_02]]
+Simple applications of if
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_07_01_02_01]]
+Testing exit status
+^^^^^^^^^^^^^^^^^^^
+
+The `?` variable holds the exit status of the previously executed
+command (the most recently completed foreground process).
+
+The following example shows a simple test:
+
+....
+anny ~> if [ $? -eq 0 ]
+More input> then echo 'That was a good job!'
+More input> fi
+That was a good job!
+
+anny ~>
+....
+
+The following example demonstrates that `TEST-COMMANDS` might be any
+UNIX command that returns an exit status, and that `if` again returns an
+exit status of zero:
+
+....
+anny ~> if ! grep $USER /etc/passwd
+More input> then echo "your user account is not managed locally"; fi
+your user account is not managed locally
+
+anny > echo $?
+0
+
+anny >
+....
+
+The same result can be obtained as follows:
+
+....
+anny > grep $USER /etc/passwd
+
+anny > if [ $? -ne 0 ] ; then echo "not a local account" ; fi
+not a local account
+
+anny >
+....
+
+[[sect_07_01_02_02]]
+Numeric comparisons
+^^^^^^^^^^^^^^^^^^^
+
+The examples below use numerical comparisons:
+
+....
+anny > num=`wc -l work.txt`
+
+anny > echo $num
+201
+
+anny > if [ "$num" -gt "150" ]
+More input> then echo ; echo "you've worked hard enough for today."
+More input> echo ; fi
+
+you've worked hard enough for today.
+
+
+anny >
+....
+
+This script is executed by cron every Sunday. If the week number is
+even, it reminds you to put out the garbage cans:
+
+....
+#!/bin/bash
+
+# Calculate the week number using the date command:
+
+WEEKOFFSET=$[ $(date +"%V") % 2 ]
+
+# Test if we have a remainder.  If not, this is an even week so send a message.
+# Else, do nothing.
+
+if [ $WEEKOFFSET -eq "0" ]; then
+  echo "Sunday evening, put out the garbage cans." | mail -s "Garbage cans out" your@your_domain.org
+fi
+....
+
+[[sect_07_01_02_03]]
+String comparisons
+^^^^^^^^^^^^^^^^^^
+
+An example of comparing strings for testing the user ID:
+
+....
+if [ "$(whoami)" != 'root' ]; then
+        echo "You have no permission to run $0 as non-root user."
+        exit 1;
+fi
+....
+
+With Bash, you can shorten this type of construct. The compact
+equivalent of the above test is as follows:
+
+....
+[ "$(whoami)" != 'root' ] && ( echo you are using a non-privileged account; exit 1 )
+....
+
+Similar to the ``&&'' expression which indicates what to do if the test
+proves true, ``||'' specifies what to do if the test is false.
+
+Regular expressions may also be used in comparisons:
+
+....
+anny > gender="female"
+
+anny > if [[ "$gender" == f* ]]
+More input> then echo "Pleasure to meet you, Madame."; fi
+Pleasure to meet you, Madame.
+
+anny >
+....
+
+________________________________________________________________________________________________________________________________________
+*Note*
+
+Most programmers will prefer to use the `test` built-in command, which
+is equivalent to using square brackets for comparison, like this:
+
+....
+test "$(whoami)" != 'root' && (echo you are using a non-privileged account; exit 1)
+....
+________________________________________________________________________________________________________________________________________
+
+_____________________________________________________________________________________________________________________________________________________________
+*Note*
+
+If you invoke the `exit` in a subshell, it will not pass variables to
+the parent. Use \{ and } instead of ( and ) if you do not want Bash to
+fork a subshell.
+_____________________________________________________________________________________________________________________________________________________________
+
+See the info pages for Bash for more information on pattern matching
+with the ``(( EXPRESSION ))'' and ``[[ EXPRESSION ]]'' constructs.
+
+[[sect_07_02]]
+More advanced if usage
+----------------------
+
+[[sect_07_02_01]]
+if/then/else constructs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_07_02_01_01]]
+Dummy example
+^^^^^^^^^^^^^
+
+This is the construct to use to take one course of action if the `if`
+commands test true, and another if it tests false. An example:
+
+....
+freddy scripts> gender="male"
+
+freddy scripts> if [[ "$gender" == "f*" ]]
+More input> then echo "Pleasure to meet you, Madame."
+More input> else echo "How come the lady hasn't got a drink yet?"
+More input> fi
+How come the lady hasn't got a drink yet?
+
+freddy scripts>
+....
+
+___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+*Important*
+
+Contrary to `[`, `[[` prevents word splitting of variable values. So, if
+`VAR="var with spaces"`, you do not need to double quote `$VAR` in a
+test - eventhough using quotes remains a good habit. Also, `[[` prevents
+pathname expansion, so literal strings with wildcards do not try to
+expand to filenames. Using `[[`, `==` and `!=` interpret strings to the
+right as shell glob patterns to be matched against the value to the
+left, for instance: `[[ "value" == val* ]]`.
+___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Like the `CONSEQUENT-COMMANDS` list following the `then` statement, the
+`ALTERNATE-CONSEQUENT-COMMANDS` list following the `else` statement can
+hold any UNIX-style command that returns an exit status.
+
+Another example, extending the one from link:#sect_07_01_02_01[Testing
+exit status]:
+
+....
+anny ~> su -
+Password:
+[root@elegance root]# if ! grep ^$USER /etc/passwd 1> /dev/null
+> then echo "your user account is not managed locally"
+> else echo "your account is managed from the local /etc/passwd file"
+> fi
+your account is managed from the local /etc/passwd file
+[root@elegance root]#
+....
+
+We switch to the _root_ account to demonstrate the effect of the `else`
+statement - your _root_ is usually a local account while your own user
+account might be managed by a central system, such as an LDAP server.
+
+[[sect_07_02_01_02]]
+Checking command line arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead of setting a variable and then executing a script, it is
+frequently more elegant to put the values for the
+variablesargumentstesting on the command line.
+
+We use the positional parametersargumentspositional parameters `$1`,
+`$2`, ..., `$N` for this purpose. `$#` refers to the number of command
+line argumentsargumentsnumber of arguments. `$0` refers to the name of
+the script.
+
+The following is a simple example:
+
+image:images/penguin.sh.eps[Testing of a command line argument with if]
+
+Here's another example, using twoargumentsexamples arguments:
+
+....
+anny ~> cat weight.sh
+#!/bin/bash
+
+# This script prints a message about your weight if you give it your
+# weight in kilos and height in centimeters.
+
+weight="$1"
+height="$2"
+idealweight=$[$height - 110]
+
+if [ $weight -le $idealweight ] ; then
+  echo "You should eat a bit more fat."
+else
+  echo "You should eat a bit more fruit."
+fi
+
+anny ~> bash -x weight.sh 55 169
++ weight=55
++ height=169
++ idealweight=59
++ '[' 55 -le 59 ']'
++ echo 'You should eat a bit more fat.'
+You should eat a bit more fat.
+....
+
+[[sect_07_02_01_03]]
+Testing the number of arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following exampleargumentsexample test number shows how to change
+the previous script so that it prints a message if more or less than 2
+arguments are given:
+
+....
+anny ~> cat weight.sh
+#!/bin/bash
+
+# This script prints a message about your weight if you give it your
+# weight in kilos and height in centimeters.
+
+if [ ! $# == 2 ]; then
+  echo "Usage: $0 weight_in_kilos length_in_centimeters"
+  exit
+fi
+
+weight="$1"
+height="$2"
+idealweight=$[$height - 110]
+
+if [ $weight -le $idealweight ] ; then
+  echo "You should eat a bit more fat."
+else
+  echo "You should eat a bit more fruit."
+fi
+
+anny ~> weight.sh 70 150
+You should eat a bit more fruit.
+
+anny ~> weight.sh 70 150 33
+Usage: ./weight.sh weight_in_kilos length_in_centimeters
+....
+
+The first argument is referred to as `$1`, the second as `$2` and so on.
+The total number of arguments is stored in `$#`.
+
+Check out link:#sect_07_02_05[Using the exit statement and if] for a
+more elegant way to print usage messages.
+
+[[sect_07_02_01_04]]
+Testing that a file exists
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This test is done in a lot of scriptsargumentsexample existence, because
+there's no use in starting a lot of programs if you know they're not
+going to work:
+
+....
+#!/bin/bash
+
+# This script gives information about a file.
+
+FILENAME="$1"
+
+echo "Properties for $FILENAME:"
+
+if [ -f $FILENAME ]; then
+  echo "Size is $(ls -lh $FILENAME | awk '{ print $5 }')"
+  echo "Type is $(file $FILENAME | cut -d":" -f2 -)"
+  echo "Inode number is $(ls -i $FILENAME | cut -d" " -f1 -)"
+  echo "$(df -h $FILENAME | grep -v Mounted | awk '{ print "On",$1", \
+which is mounted as the",$6,"partition."}')"
+else
+  echo "File does not exist."
+fi
+....
+
+Note that the file is referred to using a variable; in this case it is
+the first argument to the script. Alternatively, when no arguments are
+given, file locations are usually stored in variables at the beginning
+of a script, and their content is referred to using these variables.
+Thus, when you want to change a file name in a script, you only need to
+do it once.
+
+______________________________________________________________________________________________________________________________________________________________________________________________________________
+*Tip*
+
+The above example will fail if the value of `$1` can be parsed as
+multiple words. In that case, the `if` command can be fixed either using
+double quotes around the filename, or by using `[[` instead of `[`.
+______________________________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_07_02_02]]
+if/then/elif/else constructs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[[sect_07_02_02_01]]
+General
+^^^^^^^
+
+This is the full form of the `if` statement:
+
+if TEST-COMMANDS; then
+
+CONSEQUENT-COMMANDS;
+
+elif MORE-TEST-COMMANDS; then
+
+MORE-CONSEQUENT-COMMANDS;
+
+else ALTERNATE-CONSEQUENT-COMMANDS;
+
+fi
+
+The `TEST-COMMANDS` list is executed, and if its return status is zero,
+the `CONSEQUENT-COMMANDS` list is executed. If `TEST-COMMANDS` returns a
+non-zero status, each `elif` list is executed in turn, and if its exit
+status is zero, the corresponding `MORE-CONSEQUENT-COMMANDS` is executed
+and the command completes. If `else` is followed by an
+`ALTERNATE-CONSEQUENT-COMMANDS` list, and the final command in the final
+`if` or `elif` clause has a non-zero exit status, then
+`ALTERNATE-CONSEQUENT-COMMANDS` is executed. The return status is the
+exit status of the last command executed, or zero if no condition tested
+true.
+
+[[sect_07_02_02_02]]
+Example
+^^^^^^^
+
+This is an example that you can put in your crontab for daily execution:
+
+....
+anny /etc/cron.daily> cat disktest.sh
+#!/bin/bash
+
+# This script does a very simple test for checking disk space.
+
+space=`df -h | awk '{print $5}' | grep % | grep -v Use | sort -n | tail -1 | cut -d "%" -f1 -`
+alertvalue="80"
+
+if [ "$space" -ge "$alertvalue" ]; then
+  echo "At least one of my disks is nearly full!" | mail -s "daily diskcheck" root
+else
+  echo "Disk space normal" | mail -s "daily diskcheck" root
+fi
+....
+
+[[sect_07_02_03]]
+Nested if statements
+~~~~~~~~~~~~~~~~~~~~
+
+Inside the `if` statement, you can use another `if` statement. You may
+use as many levels of nested `if`s as you can logically manage.
+
+This is an example testing leap years:
+
+....
+anny ~/testdir> cat testleap.sh
+#!/bin/bash
+# This script will test if we're in a leap year or not.
+
+year=`date +%Y`
+
+if [ $[$year % 400] -eq "0" ]; then
+  echo "This is a leap year.  February has 29 days."
+elif [ $[$year % 4] -eq 0 ]; then
+        if [ $[$year % 100] -ne 0 ]; then
+          echo "This is a leap year, February has 29 days."
+        else
+          echo "This is not a leap year.  February has 28 days."
+        fi
+else
+  echo "This is not a leap year.  February has 28 days."
+fi
+
+anny ~/testdir> date
+Tue Jan 14 20:37:55 CET 2003
+
+anny ~/testdir> testleap.sh
+This is not a leap year.
+....
+
+[[sect_07_02_04]]
+Boolean operations
+~~~~~~~~~~~~~~~~~~
+
+The above script can be shortened using the Boolean operators ``AND''
+(&&) and ``OR'' (||).
+
+image:images/leaptest.sh.eps[Example using Boolean operators]
+
+We use the double brackets for testingarithmetic expressiontesting an
+arithmetic expression, see link:#sect_03_04_05[???]. This is equivalent
+to the `let` statement. You will get stuck using square brackets here,
+if you try something like `$[$year % 400]`, because here, the square
+brackets don't represent an actual command by themselves.
+
+Among other editors, `gvim` is one of those supporting colour schemes
+according to the file format; such editors are useful for detecting
+errors in your code.
+
+[[sect_07_02_05]]
+Using the exit statement and if
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We already briefly met the `exit` statement in
+link:#sect_07_02_01_03[Testing the number of arguments]. It terminates
+execution of the entire script. It is most often used if the input
+requested from the user is incorrect, if a statement did not run
+successfully or if some other error occurred.
+
+The `exit` statement takes an optional argumentargumentsexit status.
+This argument is the integer exit status code, which is passed back to
+the parent and stored in the `$?` variable.
+
+A zero argumentexit statusarguments means that the script ran
+successfully. Any other value may be used by programmers to pass back
+different messages to the parent, so that different actions can be taken
+according to failure or success of the child process. If no argument is
+given to the `exit` command, the parent shell uses the current value of
+the `$?` variable.
+
+Below is an example with a slightly adapted `penguin.sh` script, which
+sends its exit status back to the parent, `feed.sh`:
+
+....
+anny ~/testdir> cat penguin.sh
+#!/bin/bash
+                                                                                                 
+# This script lets you present different menus to Tux.  He will only be happy
+# when given a fish.  We've also added a dolphin and (presumably) a camel.
+                                                                                                 
+if [ "$menu" == "fish" ]; then
+  if [ "$animal" == "penguin" ]; then
+    echo "Hmmmmmm fish... Tux happy!"
+  elif [ "$animal" == "dolphin" ]; then
+    echo "Pweetpeettreetppeterdepweet!"
+  else
+    echo "*prrrrrrrt*"
+  fi
+else
+  if [ "$animal" == "penguin" ]; then
+    echo "Tux don't like that.  Tux wants fish!"
+    exit 1
+  elif [ "$animal" == "dolphin" ]; then
+    echo "Pweepwishpeeterdepweet!"
+    exit 2
+  else
+    echo "Will you read this sign?!"
+    exit 3
+  fi
+fi
+....
+
+This script is called upon in the next one, which therefore exports its
+variables `menu` and `animal`:
+
+....
+anny ~/testdir> cat feed.sh
+#!/bin/bash
+# This script acts upon the exit status given by penguin.sh
+                                                                                                 
+export menu="$1"
+export animal="$2"
+                                                                                                 
+feed="/nethome/anny/testdir/penguin.sh"
+                                                                                                 
+$feed $menu $animal
+                                                                                                 
+case $? in
+                                                                                                 
+1)
+  echo "Guard: You'd better give'm a fish, less they get violent..."
+  ;;
+2)
+  echo "Guard: It's because of people like you that they are leaving earth all the time..."
+  ;;
+3)
+  echo "Guard: Buy the food that the Zoo provides for the animals, you ***, how
+do you think we survive?"
+  ;;
+*)
+  echo "Guard: Don't forget the guide!"
+  ;;
+esac
+                                                                                                 
+anny ~/testdir> ./feed.sh apple penguin
+Tux don't like that.  Tux wants fish!
+Guard: You'd better give'm a fish, less they get violent...
+....
+
+As you can see, exit status codes can be chosen freely. Existing
+commands usually have a series of defined codes; see the programmer's
+manual for each command for more information.
+
+[[sect_07_03]]
+Using case statements
+---------------------
+
+[[sect_07_03_01]]
+Simplified conditions
+~~~~~~~~~~~~~~~~~~~~~
+
+Nested `if` statements might be nice, but as soon as you are confronted
+with a couple of different possible actions to take, they tend to
+confuse. For the more complex conditionals, use the `case` syntax:
+
+case
+
+EXPRESSION
+
+in
+
+CASE1
+
+) COMMAND-LIST;;
+
+CASE2
+
+) COMMAND-LIST;; ...
+
+CASEN
+
+) COMMAND-LIST;; esac
+
+Each case is an expression matching a pattern. The commands in the
+`COMMAND-LIST` for the first match are executed. The ``|'' symbol is
+used for separating multiple patterns, and the ``)'' operator terminates
+a pattern list. Each case plus its according commands are called a
+_clause_. Each clause must be terminated with ``;;''. Each `case`
+statement is ended with the `esac` statement.
+
+In the example, we demonstrate use of cases for sending a more selective
+warning message with the `disktest.sh` script:
+
+....
+anny ~/testdir> cat disktest.sh
+#!/bin/bash
+
+# This script does a very simple test for checking disk space.
+
+space=`df -h | awk '{print $5}' | grep % | grep -v Use | sort -n | tail -1 | cut -d "%" -f1 -`
+
+case $space in
+[1-6]*)
+  Message="All is quiet."
+  ;;
+[7-8]*)
+  Message="Start thinking about cleaning out some stuff.  There's a partition that is $space % full."
+  ;;
+9[1-8])
+  Message="Better hurry with that new disk...  One partition is $space % full."
+  ;;
+99)
+  Message="I'm drowning here!  There's a partition at $space %!"
+  ;;
+*)
+  Message="I seem to be running with an nonexistent amount of disk space..."
+  ;;
+esac
+
+echo $Message | mail -s "disk report `date`" anny
+
+anny ~/testdir>
+You have new mail.
+
+anny ~/testdir> tail -16 /var/spool/mail/anny
+From anny@octarine Tue Jan 14 22:10:47 2003
+Return-Path: <anny@octarine>
+Received: from octarine (localhost [127.0.0.1])
+        by octarine (8.12.5/8.12.5) with ESMTP id h0ELAlBG020414
+        for <anny@octarine>; Tue, 14 Jan 2003 22:10:47 +0100
+Received: (from anny@localhost)
+        by octarine (8.12.5/8.12.5/Submit) id h0ELAltn020413
+        for anny; Tue, 14 Jan 2003 22:10:47 +0100
+Date: Tue, 14 Jan 2003 22:10:47 +0100
+From: Anny <anny@octarine>
+Message-Id: <200301142110.h0ELAltn020413@octarine>
+To: anny@octarine
+Subject: disk report Tue Jan 14 22:10:47 CET 2003
+
+Start thinking about cleaning out some stuff.  There's a partition that is 87 % full.
+
+anny ~/testdir>
+....
+
+Of course you could have opened your mail program to check the results;
+this is just to demonstrate that the script sends a decent mail with
+``To:'', ``Subject:'' and ``From:'' header lines.
+
+Many more examples using `case` statements can be found in your system's
+init script directory. The startup scripts use `start` and `stop` cases
+to run or stop system processes. A theoretical example can be found in
+the next section.
+
+[[sect_07_03_02]]
+Initscript example
+~~~~~~~~~~~~~~~~~~
+
+Initscripts often make use of `case` statements for starting, stopping
+and querying system services. This is an excerpt of the script that
+starts Anacron, a daemon that runs commands periodically with a
+frequency specified in days.
+
+....
+case "$1" in
+        start)
+            start
+            ;;
+         
+        stop)
+            stop
+            ;;
+         
+        status)
+            status anacron
+            ;;
+        restart)
+            stop
+            start
+            ;;
+        condrestart)
+            if test "x`pidof anacron`" != x; then
+                stop
+                start
+            fi
+            ;;
+         
+        *)
+            echo $"Usage: $0 {start|stop|restart|condrestart|status}"
+            exit 1
+ 
+esac
+....
+
+The tasks to execute in each case, such as stopping and starting the
+daemon, are defined in functions, which are partially sourced from the
+`/etc/rc.d/init.d/functions` file. See link:#chap_11[???] for more
+explanation.
+
+[[sect_07_04]]
+Summary
+-------
+
+In this chapter we learned how to build conditions into our scripts so
+that different actions can be undertaken upon success or failure of a
+command. The actions can be determined using the `if` statement. This
+allows you to perform arithmetic and string comparisons, and testing of
+exit code, input and files needed by the script.
+
+A simple `if/then/fi` test often preceeds commands in a shell script in
+order to prevent output generation, so that the script can easily be run
+in the background or through the cron facility. More complex definitions
+of conditions are usually put in a `case` statement.
+
+Upon successful condition testing, the script can explicitly inform the
+parent using the `exit 0` status. Upon failure, any other number may be
+returned. Based on the return code, the parent program can take
+appropriate action.
+
+[[sect_07_05]]
+Exercises
+---------
+
+Here are some ideas to get you started using `if` in scripts:
+
+1.  Use an `if/then/elif/else` construct that prints information about
+the current month. The script should print the number of days in this
+month, and give information about leap years if the current month is
+February.
+2.  Do the same, using a `case` statement and an alternative use of the
+`date` command.
+3.  Modify `/etc/profile` so that you get a special greeting message
+when you connect to your system as _root_.
+4.  Edit the `leaptest.sh` script from link:#sect_07_02_04[Boolean
+operations] so that it requires one argument, the year. Test that
+exactly one argument is supplied.
+5.  Write a script called `whichdaemon.sh` that checks if the `httpd`
+and `init` daemons are running on your system. If an `httpd` is running,
+the script should print a message like, ``This machine is running a web
+server.'' Use `ps` to check on processes.
+6.  Write a script that makes a backup of your home directory on a
+remote machine using `scp`. The script should report in a log file, for
+instance `~/log/homebackup.log`. If you don't have a second machine to
+copy the backup to, use `scp` to test copying it to the localhost. This
+requires SSH keys between the two hosts, or else you have to supply a
+password. The creation of SSH keys is explained in `man ssh-keygen`.
+7.  Adapt the script from the first example in
+link:#sect_07_03_01[Simplified conditions] to include the case of
+exactly 90% disk space usage, and lower than 10% disk space usage.
++
+The script should use `tar cf` for the creation of the backup and `gzip`
+or `bzip2` for compressing the `.tar` file. Put all filenames in
+variables. Put the name of the remote server and the remote directory in
+a variable. This will make it easier to re-use the script or to make
+changes to it in the future.
++
+The script should check for the existence of a compressed archive. If
+this exists, remove it first in order to prevent output generation.
++
+The script should also check for available diskspace. Keep in mind that
+at any given moment you could have the data in your home directory, the
+data in the `.tar` file and the data in the compressed archive all
+together on your disk. If there is not enough diskspace, exit with an
+error message in the log file.
++
+The script should clean up the compressed archive before it exits.

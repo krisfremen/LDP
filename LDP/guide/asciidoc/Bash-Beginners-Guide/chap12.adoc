@@ -1,0 +1,294 @@
+[[chap_12]]
+Catching signals
+----------------
+
+________________________________________________________
+In this chapter, we will discuss the following subjects:
+
+* Available signals
+* Use of the signals
+* Use of the `trap` statement
+* How to prevent users from interrupting your programs
+________________________________________________________
+
+[[sect_12_01]]
+Signals
+-------
+
+[[sect_12_01_01]]
+Introduction
+~~~~~~~~~~~~
+
+[[sect_12_01_01_01]]
+Finding the signal man page
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Your system contains a man page listing all the available signals, but
+depending on your operating system, it might be opened in a different
+way. On most Linux systems, this will be `man 7 signal`. When in doubt,
+locate the exact man page and section using commands like
+
+man
+
+-k
+
+signal | grep
+
+list
+
+or
+
+apropos signal | grep
+
+list
+
+Signal names can be found using `kill -l`.
+
+[[sect_12_01_01_02]]
+Signals to your Bash shell
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the absence of any traps, an interactive Bash shell ignores _SIGTERM_
+and _SIGQUIT_. _SIGINT_ is caught and handled, and if job control is
+active, _SIGTTIN_, _SIGTTOU_ and _SIGTSTP_ are also ignored. Commands
+that are run as the result of a command substitution also ignore these
+signals, when keyboard generated.
+
+_SIGHUP_ by default exits a shell. An interactive shell will send a
+_SIGHUP_ to all jobs, running or stopped; see the documentation on the
+`disown` built-in if you want to disable this default behavior for a
+particular process. Use the `huponexit` option for killing all jobs upon
+receiving a _SIGHUP_ signal, using the `shopt` built-in.
+
+[[sect_12_01_01_03]]
+Sending signals using the shell
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following signals can be sent using the Bash shell:
+
+.Control signals in Bash
+[cols=",",options="header",]
+|=======================================================================
+|Standard key combination |Meaning
+|Ctrl+C |The interrupt signal, sends SIGINT to the job running in the
+foreground.
+
+|Ctrl+Y |The _delayed suspend_ character. Causes a running process to be
+stopped when it attempts to read input from the terminal. Control is
+returned to the shell, the user can foreground, background or kill the
+process. Delayed suspend is only available on operating systems
+supporting this feature.
+
+|Ctrl+Z |The _suspend_ signal, sends a _SIGTSTP_ to a running program,
+thus stopping it and returning control to the shell.
+|=======================================================================
+
+_________________________________________________________________________________________________________________________________________________________________________________________
+*Note*
+
+Check your `stty` settings. Suspend and resume of output is usually
+disabled if you are using ``modern'' terminal emulations. The standard
+`xterm` supports Ctrl+S and Ctrl+Q by default.
+_________________________________________________________________________________________________________________________________________________________________________________________
+
+[[sect_12_01_02]]
+Usage of signals with kill
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Most modern shells, Bash included, have a built-in `kill` function. In
+Bash, both signal names and numbers are accepted as options, and
+arguments may be job or process IDs. An exit status can be reported
+using the `-l` option: zero when at least one signal was successfully
+sent, non-zero if an error occurred.
+
+Using the `kill` command from `/usr/bin`, your system might enable extra
+options, such as the ability to kill processes from other than your own
+user ID and specifying processes by name, like with `pgrep` and `pkill`.
+
+Both `kill` commands send the _TERM_ signal if none is given.
+
+This is a list of the most common signals:
+
+.Common kill signals
+[cols=",,",options="header",]
+|===================================
+|Signal name |Signal value |Effect
+|SIGHUP |1 |Hangup
+|SIGINT |2 |Interrupt from keyboard
+|SIGKILL |9 |Kill signal
+|SIGTERM |15 |Termination signal
+|SIGSTOP |17,19,23 |Stop the process
+|===================================
+
+______________________________________________________________
+*Note*
+
+_SIGKILL_ and _SIGSTOP_ can not be caught, blocked or ignored.
+______________________________________________________________
+
+When killing a process or series of processes, it is common sense to
+start trying with the least dangerous signal, _SIGTERM_. That way,
+programs that care about an orderly shutdown get the chance to follow
+the procedures that they have been designed to execute when getting the
+_SIGTERM_ signal, such as cleaning up and closing open files. If you
+send a _SIGKILL_ to a process, you remove any chance for the process to
+do a tidy cleanup and shutdown, which might have unfortunate
+consequences.
+
+But if a clean termination does not work, the _INT_ or__KILL__ signals
+might be the only way. For instance, when a process does not die using
+Ctrl+C, it is best to use the `kill -9` on that process ID:
+
+....
+maud: ~> ps -ef | grep stuck_process
+maud    5607   2214  0 20:05 pts/5    00:00:02 stuck_process
+
+maud: ~> kill -9 5607
+
+maud: ~> ps -ef | grep stuck_process
+maud    5614    2214 0 20:15 pts/5    00:00:00 grep stuck_process
+[1]+ Killed     stuck_process
+....
+
+When a process starts up several instances, `killall` might be easier.
+It takes the same option as the `kill` command, but applies on all
+instances of a given process. Test this command before using it in a
+production environment, since it might not work as expected on some of
+the commercial Unices.
+
+[[sect_12_02]]
+Traps
+-----
+
+[[sect_12_02_01]]
+General
+~~~~~~~
+
+There might be situations when you don't want users of your scripts to
+exit untimely using keyboard abort sequences, for example because input
+has to be provided or cleanup has to be done. The `trap` statement
+catches these sequences and can be programmed to execute a list of
+commands upon catching those signals.
+
+The syntax for the `trap` statement is straightforward:
+
+trap [COMMANDS] [SIGNALS]
+
+This instructs the `trap` command to catch the listed _SIGNALS_, which
+may be signal names with or without the _SIG_ prefix, or signal numbers.
+If a signal is _0_ or _EXIT_, the `COMMANDS` are executed when the shell
+exits. If one of the signals is _DEBUG_, the list of `COMMANDS` is
+executed after every simple command. A signal may also be specified as
+_ERR_; in that case `COMMANDS` are executed each time a simple command
+exits with a non-zero status. Note that these commands will not be
+executed when the non-zero exit status comes from part of an `if`
+statement, or from a `while` or `until` loop. Neither will they be
+executed if a logical _AND_ (&&) or _OR_ (||) result in a non-zero exit
+code, or when a command's return status is inverted using the _!_
+operator.
+
+The return status of the `trap` command itself is zero unless an invalid
+signal specification is encountered. The `trap` command takes a couple
+of options, which are documented in the Bash info pages.
+
+Here is a very simple example, catching Ctrl+C from the user, upon which
+a message is printed. When you try to kill this program without
+specifying the _KILL_ signal, nothing will happen:
+
+....
+#!/bin/bash
+# traptest.sh
+
+trap "echo Booh!" SIGINT SIGTERM
+echo "pid is $$"
+
+while :         # This is the same as "while true".
+do
+        sleep 60    # This script is not really doing anything.
+done
+....
+
+[[sect_12_02_02]]
+How Bash interprets traps
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When Bash receives a signal for which a trap has been set while waiting
+for a command to complete, the trap will not be executed until the
+command completes. When Bash is waiting for an asynchronous command via
+the `wait` built-in, the reception of a signal for which a trap has been
+set will cause the `wait` built-in to return immediately with an exit
+status greater than 128, immediately after which the trap is executed.
+
+[[sect_12_02_03]]
+More examples
+~~~~~~~~~~~~~
+
+[[sect_12_02_03_01]]
+Detecting when a variable is used
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When debugging longer scripts, you might want to give a variable the
+_trace_ attribute and trap _DEBUG_ messages for that variable. Normally
+you would just declare a variable using an assignment like
+`VARIABLE=value`. Replacing the declaration of the variable with the
+following lines might provide valuable information about what your
+script is doing:
+
+....
+declare -t VARIABLE=value
+
+trap "echo VARIABLE is being used here." DEBUG
+
+# rest of the script
+....
+
+[[sect_12_02_03_02]]
+Removing rubbish upon exit
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `whatis` command relies on a database which is regularly built using
+the `makewhatis.cron` script with cron:
+
+....
+#!/bin/bash
+
+LOCKFILE=/var/lock/makewhatis.lock
+
+# Previous makewhatis should execute successfully:
+
+[ -f $LOCKFILE ] && exit 0
+
+# Upon exit, remove lockfile.
+
+trap "{ rm -f $LOCKFILE ; exit 255; }" EXIT
+
+touch $LOCKFILE
+makewhatis -u -w
+exit 0
+....
+
+[[sect_12_03]]
+Summary
+-------
+
+Signals can be sent to your programs using the `kill` command or
+keyboard shortcuts. These signals can be caught, upon which action can
+be performed, using the `trap` statement.
+
+Some programs ignore signals. The only signal that no program can ignore
+is the _KILL_ signal.
+
+[[sect_12_04]]
+Exercises
+---------
+
+A couple of practical examples:
+
+1.  Create a script that writes a boot image to a diskette using the
+`dd` utility. If the user tries to interrupt the script using Ctrl+C,
+display a message that this action will make the diskette unusable.
+2.  Write a script that automates the installation of a third-party
+package of your choice. The package must be downloaded from the
+Internet. It must be decompressed, unarchived and compiled if these
+actions are appropriate. Only the actual installation of the package
+should be uninterruptable.
